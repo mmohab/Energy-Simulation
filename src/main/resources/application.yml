@@ -31,9 +31,9 @@ neighbourhood:
 
   # Proportion (0.0 - 1.0) of houses that own each asset. Independent of
   # each other, so a house can end up with any combination.
-  heatPumpProbability: 0.45
-  pvProbability: 0.55
-  evChargerProbability: 0.40
+  heatPumpProbability: 0.30
+  pvProbability: 0.40
+  evChargerProbability: 0.20
 
   # Random size ranges per asset (uniform between min and max).
   heatPumpKwMin: 3.0

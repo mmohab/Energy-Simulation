@@ -43,12 +43,12 @@ public class NeighbourhoodConfig {
             + "the time actually used is always reported back here afterwards.", example = "08:00", nullable = true)
     private String startTime;
 
-    @Schema(description = "Proportion (0.0-1.0) of houses with a heat pump.", example = "0.45")
-    private double heatPumpProbability = 0.45;
-    @Schema(description = "Proportion (0.0-1.0) of houses with PV/solar panels.", example = "0.55")
-    private double pvProbability = 0.55;
-    @Schema(description = "Proportion (0.0-1.0) of houses with a home EV charger.", example = "0.40")
-    private double evChargerProbability = 0.40;
+    @Schema(description = "Proportion (0.0-1.0) of houses with a heat pump.", example = "0.30")
+    private double heatPumpProbability = 0.30;
+    @Schema(description = "Proportion (0.0-1.0) of houses with PV/solar panels.", example = "0.40")
+    private double pvProbability = 0.40;
+    @Schema(description = "Proportion (0.0-1.0) of houses with a home EV charger.", example = "0.20")
+    private double evChargerProbability = 0.20;
 
     private double heatPumpKwMin = 3.0;
     private double heatPumpKwMax = 9.0;
