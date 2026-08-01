@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neighbourhood Energy Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="eyebrow">Grid Watch</span>
+      <h1>Neighbourhood Energy Simulation</h1>
+    </div>
+
+    <div class="topbar-clock">
+      <div class="clock-block">
+        <span class="clock-label">Date</span>
+        <span class="clock-value" id="dateValue">–</span>
+      </div>
+      <div class="clock-block">
+        <span class="clock-label">Time</span>
+        <span class="clock-value" id="timeValue">00:00</span>
+      </div>
+      <div class="clock-block">
+        <span class="clock-label">Season</span>
+        <span class="clock-value" id="seasonValue">–</span>
+      </div>
+      <div class="clock-block">
+        <span class="clock-label">Outdoor</span>
+        <span class="clock-value" id="tempValue">–°C</span>
+      </div>
+      <div class="clock-block">
+        <span class="clock-label">Cloud cover</span>
+        <span class="clock-value" id="cloudValue">–%</span>
+      </div>
+      <div class="clock-block">
+        <span class="clock-label">Sun</span>
+        <span class="clock-value clock-value-small" id="sunValue">–</span>
+      </div>
+    </div>
+
+    <div class="topbar-controls">
+      <button id="playBtn" class="btn btn-primary">▶ Run</button>
+      <button id="stepBtn" class="btn">Step +10m</button>
+      <button id="ffBtn" class="btn">⏩ +4h</button>
+      <button id="resetBtn" class="btn btn-ghost">↺ New neighbourhood</button>
+      <button id="configBtn" class="btn btn-ghost">⚙ Configure</button>
+      <label class="speed-control">
+        <span>Speed</span>
+        <input type="range" id="speedSlider" min="60" max="1000" value="250" step="10">
+      </label>
+    </div>
+  </header>
+
+  <section class="summary-strip">
+    <div class="summary-card demand">
+      <span class="summary-label">Total demand</span>
+      <span class="summary-value" id="demandValue">0.0</span>
+      <span class="summary-unit">kW</span>
+    </div>
+    <div class="summary-card generation">
+      <span class="summary-label">Total PV generation</span>
+      <span class="summary-value" id="generationValue">0.0</span>
+      <span class="summary-unit">kW</span>
+    </div>
+    <div class="summary-card net" id="netCard">
+      <span class="summary-label">Net grid flow</span>
+      <span class="summary-value" id="netValue">0.0</span>
+      <span class="summary-unit" id="netUnit">kW import</span>
+    </div>
+    <div class="summary-card assets">
+      <span class="summary-label">Assets installed</span>
+      <div class="asset-counts">
+        <span title="Heat pumps">🔥 <b id="countHeatPump">0</b></span>
+        <span title="PV arrays">☀️ <b id="countPv">0</b></span>
+        <span title="Home EV chargers">🔌 <b id="countEv">0</b></span>
+        <span title="Public EV chargers">🅿️ <b id="countPublicEv">0</b></span>
+      </div>
+    </div>
+  </section>
+
+  <main class="main-grid">
+
+    <section class="panel street-panel">
+      <div class="panel-header">
+        <h2>The street, right now</h2>
+        <div class="legend">
+          <span class="legend-item"><i class="dot dot-import"></i>Importing</span>
+          <span class="legend-item"><i class="dot dot-export"></i>Exporting</span>
+          <span class="legend-item"><i class="dot dot-idle"></i>Idle</span>
+        </div>
+      </div>
+      <div id="houseGrid" class="house-grid"></div>
+    </section>
+
+    <section class="panel chart-panel">
+      <div class="panel-header">
+        <h2>Demand vs. generation over time</h2>
+      </div>
+      <canvas id="powerChart" height="230"></canvas>
+    </section>
+
+  </main>
+
+  <main class="main-grid main-grid-secondary">
+
+    <section class="panel chargers-panel">
+      <div class="panel-header">
+        <h2>Public EV chargers</h2>
+        <span class="panel-sub" id="publicChargerLoadLabel">0.0 kW total</span>
+      </div>
+      <div id="publicChargerGrid" class="charger-grid"></div>
+    </section>
+
+    <section class="panel cumulative-panel">
+      <div class="panel-header">
+        <h2>Cumulative energy since start</h2>
+        <span class="panel-sub">Per asset, in kWh</span>
+      </div>
+      <div id="cumulativeBars" class="cumulative-bars"></div>
+    </section>
+
+  </main>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2>House registry</h2>
+      <span class="panel-sub">Tap a column header row for details — values update every tick.</span>
+    </div>
+    <div class="table-scroll">
+      <table id="houseTable">
+        <thead>
+          <tr>
+            <th>House</th>
+            <th>Assets</th>
+            <th>Base load</th>
+            <th>Heat pump</th>
+            <th>EV</th>
+            <th>PV gen.</th>
+            <th>Net</th>
+            <th>Meter: used</th>
+            <th>Meter: generated</th>
+          </tr>
+        </thead>
+        <tbody id="houseTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div id="houseDetail" class="house-detail hidden">
+    <button class="detail-close" id="detailClose">×</button>
+    <div id="houseDetailContent"></div>
+  </div>
+
+  <div id="configPanel" class="config-panel hidden">
+    <button class="detail-close" id="configClose">×</button>
+    <h3>Neighbourhood configuration</h3>
+    <p class="config-note">Changes regenerate the neighbourhood and restart the simulation at day 1.</p>
+
+    <div class="config-grid">
+      <label class="config-field">
+        <span>Random seed <i>(blank = random each time)</i></span>
+        <input type="number" id="cfgSeed" placeholder="e.g. 42">
+      </label>
+      <label class="config-field">
+        <span>Step size</span>
+        <select id="cfgStepMinutes">
+          <option value="1">1 minute</option>
+          <option value="5">5 minutes</option>
+          <option value="10">10 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">60 minutes</option>
+        </select>
+      </label>
+      <label class="config-field">
+        <span>Number of houses</span>
+        <input type="number" id="cfgHouseCount" min="1" max="500">
+      </label>
+      <label class="config-field">
+        <span>Heat pump proportion (%)</span>
+        <input type="number" id="cfgHeatPumpPct" min="0" max="100">
+      </label>
+      <label class="config-field">
+        <span>PV proportion (%)</span>
+        <input type="number" id="cfgPvPct" min="0" max="100">
+      </label>
+      <label class="config-field">
+        <span>Home EV charger proportion (%)</span>
+        <input type="number" id="cfgEvPct" min="0" max="100">
+      </label>
+    </div>
+
+    <div class="config-actions">
+      <button id="cfgApplyBtn" class="btn btn-primary">Apply &amp; regenerate</button>
+      <button id="cfgLoadBtn" class="btn btn-ghost">Reload current config</button>
+    </div>
+    <p class="config-hint">For full control (size ranges, public charger roster) edit <code>application.yml</code> or POST JSON to <code>/api/simulation/config</code> — see the README.</p>
+  </div>
+
+  <footer class="app-footer">
+    <span>Seed in use: <b id="footerSeed">–</b></span>
+  </footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

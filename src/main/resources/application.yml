@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: neighbourhood-energy-sim
+
+server:
+  port: 8080
+
+# --------------------------------------------------------------------------
+# Neighbourhood generation config. Every value here can be overridden by an
+# external file (see config/neighbourhood-example.yml and the README), or
+# changed at runtime via POST /api/simulation/config.
+# --------------------------------------------------------------------------
+neighbourhood:
+  # Fixed seed for reproducible runs. Leave commented out for a fresh random
+  # seed each time the neighbourhood is (re)generated — the seed actually
+  # used is always reported back via GET /api/simulation/config.
+  # seed: 42
+
+  houseCount: 30
+
+  # Simulation tick size in minutes. Any of 1, 5, 10, 15, 30, 60 works well;
+  # other values are accepted too (rounded so a day always adds up to
+  # exactly 24h). Smaller = smoother/more detailed but more ticks per day.
+  stepMinutes: 10
+
+  # Proportion (0.0 - 1.0) of houses that own each asset. Independent of
+  # each other, so a house can end up with any combination.
+  heatPumpProbability: 0.45
+  pvProbability: 0.55
+  evChargerProbability: 0.40
+
+  # Random size ranges per asset (uniform between min and max).
+  heatPumpKwMin: 3.0
+  heatPumpKwMax: 9.0
+  pvKwMin: 3.0
+  pvKwMax: 8.0
+  baseLoadFactorMin: 0.6
+  baseLoadFactorMax: 1.6
+
+  # A home EV charger's rated power is picked at random from this list.
+  homeEvChargerPowerOptionsKw: [3.7, 7.4]
+
+  # Public (non-household) EV charging points around the neighbourhood.
+  publicChargers:
+    - name: "Village Green - Kerbside 1"
+      powerKw: 11.0
+    - name: "Village Green - Kerbside 2"
+      powerKw: 11.0
+    - name: "Supermarket Car Park - Rapid A"
+      powerKw: 50.0
+    - name: "Supermarket Car Park - Rapid B"
+      powerKw: 50.0
+    - name: "Train Station - Kerbside"
+      powerKw: 22.0
+    - name: "Community Hall - Kerbside"
+      powerKw: 22.0

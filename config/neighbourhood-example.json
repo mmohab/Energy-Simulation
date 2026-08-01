@@ -1,0 +1,15 @@
+{
+  "_comment": "POST this file's contents to /api/simulation/config to reconfigure and regenerate the neighbourhood at runtime. Only the fields present here are changed.",
+  "seed": 1234,
+  "stepMinutes": 15,
+  "houseCount": 40,
+  "heatPumpProbability": 0.6,
+  "pvProbability": 0.65,
+  "evChargerProbability": 0.5,
+  "homeEvChargerPowerOptionsKw": [3.7, 7.4, 11.0],
+  "publicChargers": [
+    { "name": "Riverside - Kerbside 1", "powerKw": 11.0 },
+    { "name": "Riverside - Kerbside 2", "powerKw": 11.0 },
+    { "name": "Retail Park - Rapid Hub", "powerKw": 50.0 }
+  ]
+}

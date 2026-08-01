@@ -1,0 +1,25 @@
+# Example external configuration override.
+#
+# Run with:
+#   java -jar target/neighbourhood-energy-sim-1.0.0.jar \
+#        --spring.config.additional-location=file:./config/neighbourhood-example.yml
+#
+# or with Maven:
+#   mvn spring-boot:run -Dspring-boot.run.arguments=--spring.config.additional-location=file:./config/neighbourhood-example.yml
+#
+# Only the keys listed here are overridden; anything omitted keeps the
+# built-in default from src/main/resources/application.yml.
+
+neighbourhood:
+  seed: 42                     # fixed seed -> identical neighbourhood + weather every run
+  stepMinutes: 5                 # finer-grained 5-minute ticks
+  houseCount: 15                # a smaller street
+  heatPumpProbability: 0.80      # a heavily electrified-heating street
+  pvProbability: 0.70
+  evChargerProbability: 0.60
+  homeEvChargerPowerOptionsKw: [7.4, 11.0]
+  publicChargers:
+    - name: "High Street - Rapid Hub"
+      powerKw: 50.0
+    - name: "High Street - Rapid Hub 2"
+      powerKw: 50.0
