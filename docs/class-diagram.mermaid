@@ -1,0 +1,178 @@
+classDiagram
+    direction LR
+
+    class EnergySimApplication {
+        <<Spring Boot App>>
+        +main(String[] args)
+    }
+
+    class SimulationController {
+        <<RestController>>
+        -SimulationEngine engine
+        +state() SimulationSnapshot
+        +step() SimulationSnapshot
+        +stepMany(int count) SimulationSnapshot
+        +reset() SimulationSnapshot
+        +config() NeighbourhoodConfig
+        +updateConfig(Map updates) SimulationSnapshot
+        +handleBadConfig(IllegalArgumentException) Map
+    }
+
+    class SimulationEngine {
+        <<Service>>
+        -NeighbourhoodConfig config
+        -Random rng
+        -List~House~ houses
+        -List~PublicCharger~ publicChargers
+        -Deque~TimePoint~ history
+        -long tick
+        -int ticksPerDay
+        -double tickHours
+        -int startTickOffset
+        -double cloudFactor
+        -double tempOffset
+        -LocalDate startDate
+        +reset() SimulationSnapshot
+        +step() SimulationSnapshot
+        +currentSnapshot() SimulationSnapshot
+        +applyConfigUpdate(Map updates) SimulationSnapshot
+        +getConfig() NeighbourhoodConfig
+        -computeTick(boolean accumulate) SimulationSnapshot
+        -buildSnapshot() SimulationSnapshot
+        -normalizeConfig()
+        -effectiveTick() long
+        -baseLoad(House, double) double
+        -heatPumpLoad(House, double, double) double
+        -evHomeLoad(House, double) double
+        -pvGeneration(House, double) double
+        -tickPublicCharger(PublicCharger, double) double
+        -outdoorTemperature(double, int) double
+        -solarIrradiance(double, SeasonSolar) double
+    }
+
+    class NeighbourhoodConfig {
+        <<ConfigurationProperties>>
+        -Long seed
+        -int houseCount
+        -int stepMinutes
+        -String startDate
+        -String startTime
+        -double heatPumpProbability
+        -double pvProbability
+        -double evChargerProbability
+        -double heatPumpKwMin
+        -double heatPumpKwMax
+        -double pvKwMin
+        -double pvKwMax
+        -double baseLoadFactorMin
+        -double baseLoadFactorMax
+        -List~Double~ homeEvChargerPowerOptionsKw
+        -int publicChargerCount
+        -List~Double~ publicChargerPowerOptionsKw
+        -List~PublicChargerConfig~ publicChargers
+    }
+
+    class PublicChargerConfig {
+        <<static nested>>
+        -String name
+        -double powerKw
+    }
+
+    class House {
+        -int id
+        -String name
+        -double baseLoadFactor
+        -boolean hasHeatPump
+        -double heatPumpCapacityKw
+        -boolean hasPv
+        -double pvCapacityKw
+        -boolean hasEvCharger
+        -double evChargerPowerKw
+        -double currentBaseLoadKw
+        -double currentHeatPumpLoadKw
+        -double currentEvLoadKw
+        -double currentPvGenerationKw
+        -double cumulativeConsumptionKwh
+        -double cumulativeGenerationKwh
+        +totalLoadKw() double
+        +netKw() double
+        +accumulate(double tickHours)
+    }
+
+    class PublicCharger {
+        -int id
+        -String name
+        -double powerKw
+        -boolean occupied
+        -int remainingTicks
+        -double currentLoadKw
+        -double cumulativeEnergyKwh
+        +addCumulativeEnergyKwh(double kwh)
+    }
+
+    class HouseSnapshot {
+        <<record / DTO>>
+        +int id
+        +String name
+        +boolean hasHeatPump
+        +boolean hasPv
+        +boolean hasEvCharger
+        +double totalLoadKw
+        +double netKw
+        +double cumulativeConsumptionKwh
+        +double cumulativeGenerationKwh
+        +from(House) HouseSnapshot
+    }
+
+    class PublicChargerSnapshot {
+        <<record / DTO>>
+        +int id
+        +String name
+        +double powerKw
+        +boolean occupied
+        +double currentLoadKw
+        +double cumulativeEnergyKwh
+        +from(PublicCharger) PublicChargerSnapshot
+    }
+
+    class TimePoint {
+        <<record / DTO>>
+        +long tick
+        +int day
+        +String timeLabel
+        +double outdoorTempC
+        +double totalDemandKw
+        +double totalGenerationKw
+        +double netImportKw
+    }
+
+    class SimulationSnapshot {
+        <<record / DTO>>
+        +long tick
+        +int day
+        +int stepMinutes
+        +String simulatedDate
+        +String timeLabel
+        +String season
+        +double outdoorTempC
+        +double totalDemandKw
+        +double totalGenerationKw
+        +double netImportKw
+        +List~HouseSnapshot~ houses
+        +List~PublicChargerSnapshot~ publicChargers
+        +List~TimePoint~ history
+    }
+
+    EnergySimApplication ..> SimulationEngine : bootstraps (Spring)
+    SimulationController --> SimulationEngine : delegates to
+    SimulationEngine --> NeighbourhoodConfig : configured by
+    SimulationEngine "1" o-- "0..*" House : manages
+    SimulationEngine "1" o-- "0..*" PublicCharger : manages
+    SimulationEngine "1" o-- "0..*" TimePoint : history
+    SimulationEngine ..> SimulationSnapshot : produces
+    NeighbourhoodConfig "1" o-- "0..*" PublicChargerConfig : optional explicit roster
+    HouseSnapshot ..> House : from()
+    PublicChargerSnapshot ..> PublicCharger : from()
+    SimulationSnapshot "1" *-- "0..*" HouseSnapshot : houses
+    SimulationSnapshot "1" *-- "0..*" PublicChargerSnapshot : publicChargers
+    SimulationSnapshot "1" *-- "0..*" TimePoint : history

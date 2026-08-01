@@ -205,6 +205,10 @@ meter readings — for a single house.
 
 ## Project layout
 
+See [`docs/class-diagram.mermaid`](docs/class-diagram.mermaid) for a class
+diagram of how these pieces relate (renders inline on GitHub/GitLab, or
+paste it into the [Mermaid Live Editor](https://mermaid.live)).
+
 ```
 src/main/java/com/energysim/
   EnergySimApplication.java
@@ -223,4 +227,6 @@ src/test/java/com/energysim/
 config/
   neighbourhood-example.yml   example external config override
   neighbourhood-example.json  example runtime /api/simulation/config payload
+docs/
+  class-diagram.mermaid   class diagram of the project's structure
 ```
