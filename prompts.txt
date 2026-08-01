@@ -1,0 +1,10 @@
+Prompts:
+Generate a Spring Boot web app simulating electricity use/generation for a neighbourhood of 30 houses, 6 public EV chargers visualized over time. Houses may have a heat pump, PV or home EV charger with configurable proportions
+The simulation should evolve and show: simulated time/date (configurable step size), weather/season that influence PV production *and* heat pump consumption, current + historical neighbourhood load, cumulative energy per asset/meter since start, cloud/temperature, and month.
+The UI requirements: current simulated date/time, weather and season, current overall neighbourhood power/energy flow, the last 24h of usage, and total energy (kWh) since start for each asset.
+Allow Simulation configuration via fixed-seed random generator with configurable proportions or a JSON/YAML config file.
+Add Swagger and open AI integrations.
+Generate unit tests for the project.
+Add configurable simulation start date and time.
+Add model, configuration logic for Neighbourhood battery, battery has Capacity (kWh), Max charge/discharge power (kW), Round-trip efficiency
+Organize UI into 2 vertical panels, one for simulation and neighbourhood settings and other for battery settings

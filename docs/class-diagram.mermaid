@@ -24,6 +24,8 @@ classDiagram
         -Random rng
         -List~House~ houses
         -List~PublicCharger~ publicChargers
+        -NeighbourhoodBattery battery
+        -double batteryPowerKw
         -Deque~TimePoint~ history
         -long tick
         -int ticksPerDay
@@ -39,6 +41,7 @@ classDiagram
         +getConfig() NeighbourhoodConfig
         -computeTick(boolean accumulate) SimulationSnapshot
         -buildSnapshot() SimulationSnapshot
+        -dispatchBatteryForCurrentLoad()
         -normalizeConfig()
         -effectiveTick() long
         -baseLoad(House, double) double
@@ -70,12 +73,33 @@ classDiagram
         -int publicChargerCount
         -List~Double~ publicChargerPowerOptionsKw
         -List~PublicChargerConfig~ publicChargers
+        -boolean batteryEnabled
+        -double batteryCapacityKwh
+        -double batteryMaxChargePowerKw
+        -double batteryMaxDischargePowerKw
+        -double batteryRoundTripEfficiency
+        -double batteryInitialSocPercent
+        -double batteryPeakThresholdKw
     }
 
     class PublicChargerConfig {
         <<static nested>>
         -String name
         -double powerKw
+    }
+
+    class NeighbourhoodBattery {
+        -double capacityKwh
+        -double maxChargePowerKw
+        -double maxDischargePowerKw
+        -double roundTripEfficiency
+        -double stateOfChargeKwh
+        -double currentPowerKw
+        -double cumulativeChargedKwh
+        -double cumulativeDischargedKwh
+        +dispatch(double requestedPowerKw, double tickHours) double
+        +getStateOfChargePercent() double
+        +getCurrentPowerKw() double
     }
 
     class House {
@@ -143,6 +167,7 @@ classDiagram
         +double outdoorTempC
         +double totalDemandKw
         +double totalGenerationKw
+        +double rawNetImportKw
         +double netImportKw
     }
 
@@ -157,7 +182,17 @@ classDiagram
         +double outdoorTempC
         +double totalDemandKw
         +double totalGenerationKw
+        +double rawNetImportKw
         +double netImportKw
+        +boolean batteryEnabled
+        +double batteryCapacityKwh
+        +double batteryStateOfChargeKwh
+        +double batteryStateOfChargePercent
+        +double batteryPowerKw
+        +double batteryPeakThresholdKw
+        +double peakReductionKw
+        +double cumulativeBatteryChargedKwh
+        +double cumulativeBatteryDischargedKwh
         +List~HouseSnapshot~ houses
         +List~PublicChargerSnapshot~ publicChargers
         +List~TimePoint~ history
@@ -168,9 +203,11 @@ classDiagram
     SimulationEngine --> NeighbourhoodConfig : configured by
     SimulationEngine "1" o-- "0..*" House : manages
     SimulationEngine "1" o-- "0..*" PublicCharger : manages
+    SimulationEngine "1" *-- "0..1" NeighbourhoodBattery : peak-shaving storage
     SimulationEngine "1" o-- "0..*" TimePoint : history
     SimulationEngine ..> SimulationSnapshot : produces
     NeighbourhoodConfig "1" o-- "0..*" PublicChargerConfig : optional explicit roster
+    SimulationEngine ..> NeighbourhoodBattery : dispatches above import target
     HouseSnapshot ..> House : from()
     PublicChargerSnapshot ..> PublicCharger : from()
     SimulationSnapshot "1" *-- "0..*" HouseSnapshot : houses
