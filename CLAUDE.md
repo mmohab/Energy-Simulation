@@ -241,6 +241,10 @@ panel or stays "advanced."
 
 ## Known rough edges / things to double-check first
 
+For product-level limitations and what to build next  see README.md's
+"Known limitations" — this section is narrower: code-level
+gotchas for whoever's actually editing this codebase next.
+
 - **Never compiled in this sandbox** (see "Build / run" above) — the single
   biggest risk area. Run a real build before trusting any of this blindly.
 - A test suite exists under `src/test/java/com/energysim/` (run with `mvn

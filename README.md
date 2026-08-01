@@ -7,8 +7,8 @@ default — configurable to 1/5/15/30/60 minutes).
 
 Some houses have a **heat pump** 🔥, some have **PV / solar panels** ☀️, some
 have a **home EV charger** 🔌 — and houses can have any combination (or none)
-of the three. On every reset, assets are assigned randomly (heat pump ~45%,
-PV ~55%, EV charger ~40% of houses) with randomised capacities per house.
+of the three. On every reset, assets are assigned randomly (heat pump ~30%,
+PV ~40%, EV charger ~20% of houses) with randomised capacities per house.
 Alongside the houses, **public EV charging points** 🅿️ (a mix of slow
 kerbside AC and rapid DC hubs, auto-generated to the configured count) serve
 randomly arriving vehicles throughout the day.
@@ -22,7 +22,7 @@ order of immediacy:
 
 1. **Default config file** — `src/main/resources/application.yml`, under
    the `neighbourhood:` key. This is what ships with the app (30 houses,
-   45%/55%/40% heat pump/PV/EV proportions, etc).
+   30%/40%/20% heat pump/PV/EV proportions, etc).
 2. **An external YAML/properties file**, without touching the jar — e.g.
    `config/neighbourhood-example.yml` in this repo. Run with:
    ```bash
@@ -202,6 +202,53 @@ load, and a cumulative-energy panel compares kWh totals per asset class
 since the simulation started. The house registry table and click-to-inspect
 detail panel show the load/generation breakdown — including cumulative
 meter readings — for a single house.
+
+## Known limitations
+
+This is a demo-scale, single-instance app, not a production system. Known
+limitations, and what I'd invest in next given more time:
+
+- **In-memory only, single JVM instance.** All state — the neighbourhood,
+  tick history, cumulative meters — lives in one `SimulationEngine`
+  singleton bean, in memory. Restart the app and it's gone; there's no
+  persistence. **Scaling this to thousands of homes would require investing
+  in a proper database setup**: a time-series store (e.g. TimescaleDB,
+  InfluxDB) for the tick-by-tick history and cumulative meters, and a
+  relational or document store for neighbourhood/asset configuration —
+  plus decoupling the simulation "tick" from the request/response cycle
+  (a scheduled job advancing and persisting state, with the API reading
+  from the store) instead of computing everything synchronously per
+  HTTP call.
+- **Rolling history window, not full history.** `maxHistory` caps in-memory
+  history to ~3 simulated days specifically to bound memory growth; older
+  ticks are discarded, not archived. Database-backed history would let the
+  chart — and any future full-run export/analysis — go back further, or
+  indefinitely.
+- **Not horizontally scalable.** Because state is a singleton in one JVM,
+  running multiple instances behind a load balancer isn't possible without
+  either sticky sessions (fragile) or a shared external state store — the
+  same database investment above is the prerequisite for this too.
+- **Per-tick computation is O(houses + chargers), synchronous, single-
+  threaded.** Fine for tens to low hundreds of houses at interactive
+  polling rates. Thousands of houses (or many concurrent neighbourhoods)
+  would need batching/parallelization of the physics calculations and
+  likely a move away from recomputing the whole neighbourhood on every
+  single tick request.
+- **Polling, not push.** The frontend polls the backend on a `setInterval`.
+  Simple and fine for one viewer; doesn't scale to many concurrent viewers
+  of the same run. A WebSocket/SSE broadcast would be the next step once
+  there's more than one client watching a given simulation.
+- **No authentication or multi-tenancy.** Anyone who can reach the API can
+  reset/reconfigure the one shared simulation. Fine for a local demo; real
+  auth plus per-user/per-tenant simulation instances (which, again, wants
+  state in a database rather than JVM memory) would be needed beyond that.
+- **No CI pipeline.** For development and release automation
+- **Physics are simplified, not calibrated.** The heat pump/PV/EV/weather
+  models are built to be *directionally* realistic (season affects heat
+  demand, cloud cover affects PV output, cold weather hurts heat pump
+  efficiency, etc.) for a convincing demo — not validated against real
+  smart-meter or weather datasets. A production version would want that
+  calibration.
 
 ## Project layout
 
