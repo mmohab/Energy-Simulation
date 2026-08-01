@@ -3,6 +3,7 @@ package com.energysim.service;
 import com.energysim.config.NeighbourhoodConfig;
 import com.energysim.model.House;
 import com.energysim.model.HouseSnapshot;
+import com.energysim.model.NeighbourhoodBattery;
 import com.energysim.model.PublicCharger;
 import com.energysim.model.PublicChargerSnapshot;
 import com.energysim.model.SimulationSnapshot;
@@ -92,6 +93,8 @@ public class SimulationEngine {
 
     private List<House> houses = new ArrayList<>();
     private List<PublicCharger> publicChargers = new ArrayList<>();
+    private NeighbourhoodBattery battery;
+    private double batteryPowerKw;
     private final Deque<TimePoint> history = new ArrayDeque<>();
 
     private long tick;
@@ -156,6 +159,12 @@ public class SimulationEngine {
         cumulativeEvHomeKwh = 0;
         cumulativeEvPublicKwh = 0;
         cumulativePvKwh = 0;
+
+        battery = config.isBatteryEnabled() ? new NeighbourhoodBattery(
+                config.getBatteryCapacityKwh(), config.getBatteryMaxChargePowerKw(),
+                config.getBatteryMaxDischargePowerKw(), config.getBatteryRoundTripEfficiency(),
+                config.getBatteryInitialSocPercent()) : null;
+        batteryPowerKw = 0.0;
 
         // Use the configured seed if given, otherwise pick one and record it
         // back onto the config so this run can be reproduced later.
@@ -297,6 +306,13 @@ public class SimulationEngine {
         if (config.getPublicChargers() == null) {
             config.setPublicChargers(new ArrayList<>());
         }
+
+        config.setBatteryCapacityKwh(clamp(config.getBatteryCapacityKwh(), 0.0, 10_000.0));
+        config.setBatteryMaxChargePowerKw(clamp(config.getBatteryMaxChargePowerKw(), 0.0, 10_000.0));
+        config.setBatteryMaxDischargePowerKw(clamp(config.getBatteryMaxDischargePowerKw(), 0.0, 10_000.0));
+        config.setBatteryRoundTripEfficiency(clamp(config.getBatteryRoundTripEfficiency(), 0.01, 1.0));
+        config.setBatteryInitialSocPercent(clamp(config.getBatteryInitialSocPercent(), 0.0, 100.0));
+        config.setBatteryPeakThresholdKw(Math.max(0.0, config.getBatteryPeakThresholdKw()));
     }
 
     /** Advances the simulation by one tick (size set by config.stepMinutes) and returns the new state. */
@@ -374,11 +390,15 @@ public class SimulationEngine {
             }
         }
 
+        if (accumulate) {
+            dispatchBatteryForCurrentLoad();
+        }
+
         SimulationSnapshot snapshot = buildSnapshot();
 
         history.addLast(new TimePoint(tick, snapshot.day(), snapshot.timeLabel(),
                 round(outdoorTemp), snapshot.totalDemandKw(), snapshot.totalGenerationKw(),
-                snapshot.netImportKw()));
+                snapshot.rawNetImportKw(), snapshot.netImportKw()));
         while (history.size() > maxHistory) {
             history.removeFirst();
         }
@@ -421,24 +441,58 @@ public class SimulationEngine {
             chargerSnapshots.add(PublicChargerSnapshot.from(charger));
         }
         totalDemand += publicLoad;
+        double rawNetImport = totalDemand - totalGeneration;
+        double netImport = rawNetImport - batteryPowerKw;
 
         double cumulativeDemand = cumulativeBaseLoadKwh + cumulativeHeatPumpKwh
                 + cumulativeEvHomeKwh + cumulativeEvPublicKwh;
+        double cumulativeBatteryCharged = battery == null ? 0 : battery.getCumulativeChargedKwh();
+        double cumulativeBatteryDischarged = battery == null ? 0 : battery.getCumulativeDischargedKwh();
+        double cumulativeNetImport = cumulativeDemand - cumulativePvKwh
+                + cumulativeBatteryCharged - cumulativeBatteryDischarged;
 
         return new SimulationSnapshot(
                 tick, day, config.getStepMinutes(), date.format(DATE_FMT), formatTime(hour), seasonLabel(month),
                 monthName(month), dayOfYear,
                 round(outdoorTemp), round(cloudFactor),
                 formatTime(solar.sunrise()), formatTime(solar.sunset()),
-                round(totalDemand), round(totalGeneration), round(totalDemand - totalGeneration),
+                round(totalDemand), round(totalGeneration), round(rawNetImport), round(netImport),
                 round(publicLoad),
+                battery != null,
+                round(battery == null ? 0 : battery.getCapacityKwh()),
+                round(battery == null ? 0 : battery.getStateOfChargeKwh()),
+                round(battery == null ? 0 : battery.getStateOfChargePercent()),
+                round(batteryPowerKw), round(config.getBatteryPeakThresholdKw()),
+                round(Math.max(0, rawNetImport - netImport)),
+                round(cumulativeBatteryCharged), round(cumulativeBatteryDischarged),
                 importing, exporting,
                 countHeatPump, countPv, countEv, publicChargers.size(),
                 round(cumulativeBaseLoadKwh), round(cumulativeHeatPumpKwh),
                 round(cumulativeEvHomeKwh), round(cumulativeEvPublicKwh), round(cumulativePvKwh),
-                round(cumulativeDemand), round(cumulativePvKwh), round(cumulativeDemand - cumulativePvKwh),
+                round(cumulativeDemand), round(cumulativePvKwh), round(cumulativeNetImport),
                 houseSnapshots, chargerSnapshots, new ArrayList<>(history)
         );
+    }
+
+    /** Runs the shared-battery threshold controller once for the elapsed tick. */
+    private void dispatchBatteryForCurrentLoad() {
+        if (battery == null) {
+            batteryPowerKw = 0.0;
+            return;
+        }
+        double totalDemand = publicChargers.stream().mapToDouble(PublicCharger::getCurrentLoadKw).sum();
+        double totalGeneration = 0.0;
+        for (House house : houses) {
+            totalDemand += house.totalLoadKw();
+            totalGeneration += house.getCurrentPvGenerationKw();
+        }
+        double rawNetImport = totalDemand - totalGeneration;
+        // Peak-shaving strategy: discharge only above the configured import target.
+        // Charge only from PV surplus, so the battery never creates a new grid peak.
+        double requestedPower = rawNetImport > config.getBatteryPeakThresholdKw()
+                ? rawNetImport - config.getBatteryPeakThresholdKw()
+                : rawNetImport < 0 ? rawNetImport : 0.0;
+        batteryPowerKw = battery.dispatch(requestedPower, tickHours);
     }
 
     // ------------------------------------------------------------------

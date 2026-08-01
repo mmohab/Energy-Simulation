@@ -47,7 +47,17 @@ const chart = new Chart(ctx, {
         borderWidth: 2,
       },
       {
-        label: 'Net import (kW)',
+        label: 'Grid import without battery (kW)',
+        data: [],
+        borderColor: '#7e8c90',
+        borderDash: [2, 3],
+        fill: false,
+        tension: 0.25,
+        pointRadius: 0,
+        borderWidth: 1.5,
+      },
+      {
+        label: 'Grid import with battery (kW)',
         data: [],
         borderColor: '#4c8dff',
         borderDash: [4, 3],
@@ -91,7 +101,8 @@ function updateChart(history) {
   chart.data.labels = windowed.map(p => (p.day > 1 ? `D${p.day} ` : '') + p.timeLabel);
   chart.data.datasets[0].data = windowed.map(p => p.totalDemandKw);
   chart.data.datasets[1].data = windowed.map(p => p.totalGenerationKw);
-  chart.data.datasets[2].data = windowed.map(p => p.netImportKw);
+  chart.data.datasets[2].data = windowed.map(p => p.rawNetImportKw);
+  chart.data.datasets[3].data = windowed.map(p => p.netImportKw);
   chart.update('none');
 }
 
@@ -215,6 +226,7 @@ const CUMULATIVE_ROWS = [
   { key: 'cumulativeEvHomeKwh', label: '🔌 EV (home)', color: '#4c8dff' },
   { key: 'cumulativeEvPublicKwh', label: '🅿️ EV (public)', color: '#a06cff' },
   { key: 'cumulativePvKwh', label: '☀️ PV generation', color: '#35c9b0' },
+  { key: 'cumulativeBatteryDischargedKwh', label: '🔋 Battery discharged', color: '#4c8dff' },
 ];
 
 function updateCumulative(s) {
@@ -285,6 +297,12 @@ async function loadConfigIntoForm() {
   el('cfgPublicChargerCount').value = cfg.publicChargers && cfg.publicChargers.length > 0
     ? cfg.publicChargers.length
     : cfg.publicChargerCount;
+  el('cfgBatteryEnabled').checked = cfg.batteryEnabled;
+  el('cfgBatteryCapacityKwh').value = cfg.batteryCapacityKwh;
+  el('cfgBatteryPowerKw').value = cfg.batteryMaxDischargePowerKw;
+  el('cfgBatteryEfficiencyPct').value = Math.round(cfg.batteryRoundTripEfficiency * 100);
+  el('cfgBatteryInitialSocPct').value = cfg.batteryInitialSocPercent;
+  el('cfgBatteryPeakThresholdKw').value = cfg.batteryPeakThresholdKw;
   el('footerSeed').textContent = cfg.seed ?? '–';
   stepMinutes = cfg.stepMinutes ?? 10;
   updateStepLabels();
@@ -305,6 +323,13 @@ async function applyConfigFromForm() {
     seed: seedRaw === '' ? null : parseInt(seedRaw, 10),
     startDate: startDateRaw === '' ? null : startDateRaw,
     startTime: startTimeRaw === '' ? null : startTimeRaw,
+    batteryEnabled: el('cfgBatteryEnabled').checked,
+    batteryCapacityKwh: Math.max(0, parseFloat(el('cfgBatteryCapacityKwh').value) || 0),
+    batteryMaxChargePowerKw: Math.max(0, parseFloat(el('cfgBatteryPowerKw').value) || 0),
+    batteryMaxDischargePowerKw: Math.max(0, parseFloat(el('cfgBatteryPowerKw').value) || 0),
+    batteryRoundTripEfficiency: clampPct(el('cfgBatteryEfficiencyPct').value) / 100,
+    batteryInitialSocPercent: clampPct(el('cfgBatteryInitialSocPct').value),
+    batteryPeakThresholdKw: Math.max(0, parseFloat(el('cfgBatteryPeakThresholdKw').value) || 0),
   };
   pause();
   const res = await fetch(`${API}/config`, {
@@ -371,6 +396,18 @@ function updateSummary(s) {
   el('countPv').textContent = s.assetCountPv;
   el('countEv').textContent = s.assetCountEvCharger;
   el('countPublicEv').textContent = s.publicChargerCount;
+
+  const batteryCard = el('batteryCard');
+  batteryCard.classList.toggle('disabled', !s.batteryEnabled);
+  el('batterySocValue').textContent = s.batteryEnabled
+    ? `${s.batteryStateOfChargePercent.toFixed(0)}% SoC`
+    : 'Disabled';
+  const direction = s.batteryPowerKw > 0 ? 'discharging' : s.batteryPowerKw < 0 ? 'charging' : 'idle';
+  el('batteryPowerValue').textContent = s.batteryEnabled
+    ? `${Math.abs(s.batteryPowerKw).toFixed(1)} kW ${direction}` : '—';
+  el('peakReductionLabel').textContent = s.batteryEnabled
+    ? `Peak shaving: ${s.peakReductionKw.toFixed(1)} kW now · target ${s.batteryPeakThresholdKw.toFixed(0)} kW`
+    : 'Battery disabled';
 }
 
 // --------------------------------------------------------------- Render

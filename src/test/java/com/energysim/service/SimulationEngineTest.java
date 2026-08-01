@@ -346,6 +346,28 @@ class SimulationEngineTest {
     class EnergyAccounting {
 
         @Test
+        void batteryShavesGridImportToConfiguredThresholdWhenItHasEnergy() {
+            NeighbourhoodConfig config = configWithSeed(42L);
+            config.setHouseCount(10);
+            config.setPublicChargerCount(0);
+            config.setHeatPumpProbability(0.0);
+            config.setPvProbability(0.0);
+            config.setEvChargerProbability(0.0);
+            config.setBatteryEnabled(true);
+            config.setBatteryCapacityKwh(1_000);
+            config.setBatteryInitialSocPercent(100);
+            config.setBatteryMaxDischargePowerKw(1_000);
+            config.setBatteryPeakThresholdKw(1.0);
+
+            SimulationSnapshot snapshot = new SimulationEngine(config).step();
+
+            assertThat(snapshot.rawNetImportKw()).isGreaterThan(1.0);
+            assertThat(snapshot.netImportKw()).isCloseTo(1.0, offset(0.01));
+            assertThat(snapshot.peakReductionKw()).isGreaterThan(0.0);
+            assertThat(snapshot.batteryPowerKw()).isGreaterThan(0.0);
+        }
+
+        @Test
         void totalDemandEqualsSumOfHouseLoadsPlusPublicChargers() {
             SimulationEngine engine = new SimulationEngine(configWithSeed(42L));
             for (int i = 0; i < 30; i++) engine.step();
@@ -363,13 +385,15 @@ class SimulationEngineTest {
         }
 
         @Test
-        void netImportEqualsDemandMinusGeneration() {
+        void rawNetImportEqualsDemandMinusGenerationAndBatteryAdjustsGridImport() {
             SimulationEngine engine = new SimulationEngine(configWithSeed(42L));
             for (int i = 0; i < 60; i++) engine.step();
             SimulationSnapshot snapshot = engine.currentSnapshot();
 
-            assertThat(snapshot.netImportKw())
+            assertThat(snapshot.rawNetImportKw())
                     .isCloseTo(snapshot.totalDemandKw() - snapshot.totalGenerationKw(), offset(0.05));
+            assertThat(snapshot.netImportKw())
+                    .isCloseTo(snapshot.rawNetImportKw() - snapshot.batteryPowerKw(), offset(0.05));
         }
 
         @Test

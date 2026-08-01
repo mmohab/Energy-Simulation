@@ -20,5 +20,12 @@ neighbourhood:
   pvProbability: 0.70
   evChargerProbability: 0.60
   homeEvChargerPowerOptionsKw: [7.4, 11.0]
+  batteryEnabled: true
+  batteryCapacityKwh: 120.0
+  batteryMaxChargePowerKw: 60.0
+  batteryMaxDischargePowerKw: 60.0
+  batteryRoundTripEfficiency: 0.90
+  batteryInitialSocPercent: 80.0
+  batteryPeakThresholdKw: 45.0
   publicChargerCount: 3          # auto-generates 3 named/rated chargers
   publicChargerPowerOptionsKw: [22.0, 50.0]   # only fast/rapid points on this street

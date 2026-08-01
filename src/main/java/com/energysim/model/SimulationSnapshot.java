@@ -25,8 +25,19 @@ public record SimulationSnapshot(
 
         double totalDemandKw,
         double totalGenerationKw,
+        double rawNetImportKw,
         double netImportKw,
         double publicChargerLoadKw,
+
+        boolean batteryEnabled,
+        double batteryCapacityKwh,
+        double batteryStateOfChargeKwh,
+        double batteryStateOfChargePercent,
+        double batteryPowerKw,
+        double batteryPeakThresholdKw,
+        double peakReductionKw,
+        double cumulativeBatteryChargedKwh,
+        double cumulativeBatteryDischargedKwh,
 
         int housesImporting,
         int housesExporting,

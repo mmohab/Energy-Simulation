@@ -163,7 +163,7 @@ a, button { font-family: inherit; }
 
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -213,6 +213,8 @@ a, button { font-family: inherit; }
 
 .summary-card.net.importing .summary-value { color: var(--amber); }
 .summary-card.net.exporting .summary-value { color: var(--teal); }
+.summary-card.battery .summary-value { color: var(--blue); }
+.summary-card.battery.disabled .summary-value { color: var(--text-faint); }
 
 .asset-counts {
   display: flex;
@@ -553,7 +555,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); cursor: pointer; }
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 380px;
+  width: 760px;
   max-width: calc(100vw - 32px);
   background: var(--panel);
   border: 1px solid var(--border);
@@ -577,10 +579,29 @@ tbody tr:hover { background: rgba(255,255,255,0.02); cursor: pointer; }
 }
 
 .config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.config-column {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 16px;
+}
+
+.config-column + .config-column {
+  padding-left: 24px;
+  border-left: 1px solid var(--border);
+}
+
+.config-column h4 {
+  margin: 0 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal);
 }
 
 .config-field {
@@ -592,6 +613,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); cursor: pointer; }
 }
 
 .config-field i { color: var(--text-faint); font-style: normal; }
+.config-field.config-check { justify-content: center; min-height: 43px; }
 
 .config-field input,
 .config-field select {
@@ -651,6 +673,11 @@ tbody tr:hover { background: rgba(255,255,255,0.02); cursor: pointer; }
   .house-grid { grid-template-columns: repeat(5, 1fr); }
   .charger-grid { grid-template-columns: repeat(2, 1fr); }
   .topbar-clock { order: 3; width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+}
+
+@media (max-width: 720px) {
+  .config-grid { grid-template-columns: 1fr; gap: 18px; }
+  .config-column + .config-column { padding-left: 0; padding-top: 18px; border-left: 0; border-top: 1px solid var(--border); }
 }
 
 @media (prefers-reduced-motion: reduce) {

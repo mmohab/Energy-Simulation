@@ -74,6 +74,11 @@
       <span class="summary-value" id="netValue">0.0</span>
       <span class="summary-unit" id="netUnit">kW import</span>
     </div>
+    <div class="summary-card battery" id="batteryCard">
+      <span class="summary-label">Neighbourhood battery</span>
+      <span class="summary-value" id="batterySocValue">–</span>
+      <span class="summary-unit" id="batteryPowerValue">–</span>
+    </div>
     <div class="summary-card assets">
       <span class="summary-label">Assets installed</span>
       <div class="asset-counts">
@@ -101,7 +106,8 @@
 
     <section class="panel chart-panel">
       <div class="panel-header">
-        <h2>Demand vs. generation over time</h2>
+        <h2>Battery peak shaving</h2>
+        <span class="panel-sub" id="peakReductionLabel">Battery disabled</span>
       </div>
       <canvas id="powerChart" height="230"></canvas>
     </section>
@@ -164,19 +170,21 @@
     <p class="config-note">Changes regenerate the neighbourhood and restart the simulation at day 1.</p>
 
     <div class="config-grid">
-      <label class="config-field">
+      <section class="config-column">
+        <h4>Simulation &amp; neighbourhood</h4>
+        <label class="config-field">
         <span>Random seed <i>(blank = random each time)</i></span>
         <input type="number" id="cfgSeed" placeholder="e.g. 42">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Start date <i>(blank = today)</i></span>
         <input type="date" id="cfgStartDate">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Start time <i>(blank = 00:00)</i></span>
         <input type="time" id="cfgStartTime">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Step size</span>
         <select id="cfgStepMinutes">
           <option value="1">1 minute</option>
@@ -186,27 +194,55 @@
           <option value="30">30 minutes</option>
           <option value="60">60 minutes</option>
         </select>
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Number of houses</span>
         <input type="number" id="cfgHouseCount" min="1" max="500">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Heat pump proportion (%)</span>
         <input type="number" id="cfgHeatPumpPct" min="0" max="100">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>PV proportion (%)</span>
         <input type="number" id="cfgPvPct" min="0" max="100">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Home EV charger proportion (%)</span>
         <input type="number" id="cfgEvPct" min="0" max="100">
-      </label>
-      <label class="config-field">
+        </label>
+        <label class="config-field">
         <span>Number of public EV chargers</span>
         <input type="number" id="cfgPublicChargerCount" min="0" max="200">
-      </label>
+        </label>
+      </section>
+
+      <section class="config-column">
+        <h4>Neighbourhood battery</h4>
+        <label class="config-field config-check">
+        <span><input type="checkbox" id="cfgBatteryEnabled"> Enable neighbourhood battery</span>
+        </label>
+        <label class="config-field">
+        <span>Battery capacity (kWh)</span>
+        <input type="number" id="cfgBatteryCapacityKwh" min="0" max="10000" step="1">
+        </label>
+        <label class="config-field">
+        <span>Max charge / discharge power (kW)</span>
+        <input type="number" id="cfgBatteryPowerKw" min="0" max="10000" step="1">
+        </label>
+        <label class="config-field">
+        <span>Round-trip efficiency (%)</span>
+        <input type="number" id="cfgBatteryEfficiencyPct" min="1" max="100" step="1">
+        </label>
+        <label class="config-field">
+        <span>Initial state of charge (%)</span>
+        <input type="number" id="cfgBatteryInitialSocPct" min="0" max="100" step="1">
+        </label>
+        <label class="config-field">
+        <span>Peak import target (kW)</span>
+        <input type="number" id="cfgBatteryPeakThresholdKw" min="0" max="10000" step="1">
+        </label>
+      </section>
     </div>
 
     <div class="config-actions">

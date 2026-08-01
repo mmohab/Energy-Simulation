@@ -11,6 +11,7 @@ public record TimePoint(
         double outdoorTempC,
         double totalDemandKw,
         double totalGenerationKw,
+        double rawNetImportKw,
         double netImportKw
 ) {
 }

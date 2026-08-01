@@ -77,6 +77,21 @@ public class NeighbourhoodConfig {
      */
     private List<PublicChargerConfig> publicChargers = new ArrayList<>();
 
+    @Schema(description = "Whether the shared neighbourhood battery is active.", example = "true")
+    private boolean batteryEnabled = true;
+    @Schema(description = "Usable neighbourhood battery capacity in kWh.", example = "100.0")
+    private double batteryCapacityKwh = 100.0;
+    @Schema(description = "Maximum battery charging power in kW.", example = "50.0")
+    private double batteryMaxChargePowerKw = 50.0;
+    @Schema(description = "Maximum battery discharging power in kW.", example = "50.0")
+    private double batteryMaxDischargePowerKw = 50.0;
+    @Schema(description = "Battery round-trip efficiency (0.0-1.0).", example = "0.90")
+    private double batteryRoundTripEfficiency = 0.90;
+    @Schema(description = "Initial battery state of charge as a percentage.", example = "80.0")
+    private double batteryInitialSocPercent = 80.0;
+    @Schema(description = "Peak-shaving grid-import target in kW. The battery discharges above this level.", example = "50.0")
+    private double batteryPeakThresholdKw = 50.0;
+
     // --- getters / setters -------------------------------------------------
 
     public Long getSeed() { return seed; }
@@ -132,6 +147,21 @@ public class NeighbourhoodConfig {
 
     public List<PublicChargerConfig> getPublicChargers() { return publicChargers; }
     public void setPublicChargers(List<PublicChargerConfig> publicChargers) { this.publicChargers = publicChargers; }
+
+    public boolean isBatteryEnabled() { return batteryEnabled; }
+    public void setBatteryEnabled(boolean batteryEnabled) { this.batteryEnabled = batteryEnabled; }
+    public double getBatteryCapacityKwh() { return batteryCapacityKwh; }
+    public void setBatteryCapacityKwh(double batteryCapacityKwh) { this.batteryCapacityKwh = batteryCapacityKwh; }
+    public double getBatteryMaxChargePowerKw() { return batteryMaxChargePowerKw; }
+    public void setBatteryMaxChargePowerKw(double batteryMaxChargePowerKw) { this.batteryMaxChargePowerKw = batteryMaxChargePowerKw; }
+    public double getBatteryMaxDischargePowerKw() { return batteryMaxDischargePowerKw; }
+    public void setBatteryMaxDischargePowerKw(double batteryMaxDischargePowerKw) { this.batteryMaxDischargePowerKw = batteryMaxDischargePowerKw; }
+    public double getBatteryRoundTripEfficiency() { return batteryRoundTripEfficiency; }
+    public void setBatteryRoundTripEfficiency(double batteryRoundTripEfficiency) { this.batteryRoundTripEfficiency = batteryRoundTripEfficiency; }
+    public double getBatteryInitialSocPercent() { return batteryInitialSocPercent; }
+    public void setBatteryInitialSocPercent(double batteryInitialSocPercent) { this.batteryInitialSocPercent = batteryInitialSocPercent; }
+    public double getBatteryPeakThresholdKw() { return batteryPeakThresholdKw; }
+    public void setBatteryPeakThresholdKw(double batteryPeakThresholdKw) { this.batteryPeakThresholdKw = batteryPeakThresholdKw; }
 
     /** One entry in the public-charger roster: a name and a rated power. */
     public static class PublicChargerConfig {

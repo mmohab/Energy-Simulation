@@ -1,7 +1,7 @@
 # Neighbourhood Energy Simulation
 
 A Spring Boot web app that simulates electricity use and generation across a
-neighbourhood of houses (30 by default) plus public EV chargers (6 by
+neighbourhood of houses (30 by default), public EV chargers (6 by
 default), and visualizes it live as time advances (10-minute steps by
 default — configurable to 1/5/15/30/60 minutes).
 
@@ -12,6 +12,11 @@ PV ~40%, EV charger ~20% of houses) with randomised capacities per house.
 Alongside the houses, **public EV charging points** 🅿️ (a mix of slow
 kerbside AC and rapid DC hubs, auto-generated to the configured count) serve
 randomly arriving vehicles throughout the day.
+
+A shared **neighbourhood battery** 🔋 uses a peak-shaving controller: it
+discharges when grid import exceeds its configured target and stores PV
+surplus when available. The dashboard compares grid import with and without
+the battery, making the shaved peaks visible.
 
 ## Configuration
 
@@ -38,8 +43,8 @@ order of immediacy:
    /api/simulation/config` with a JSON body containing any subset of the
    fields (see `config/neighbourhood-example.json` for a full example);
    omitted fields keep their current value. This regenerates the
-   neighbourhood immediately. The in-app panel exposes the seed, house
-   count, and the three asset proportions; for size ranges or the public
+   neighbourhood immediately. The in-app panel exposes the main household,
+   public-charger, and battery controls; for size ranges or the public
    charger roster, edit a config file or POST JSON directly.
 
 **Fixed seed:** set `neighbourhood.seed` (file) or `"seed": 42` (API) to
@@ -75,6 +80,12 @@ Configurable fields (`NeighbourhoodConfig`):
 | `publicChargerCount` | Number of public EV chargers to auto-generate (ignored if `publicChargers` is non-empty) |
 | `publicChargerPowerOptionsKw` | Possible rated power for auto-generated public chargers (one picked at random per charger) |
 | `publicChargers` | Optional explicit roster of `{ name, powerKw }` — when non-empty, fully overrides `publicChargerCount`/`publicChargerPowerOptionsKw` with exactly these chargers |
+| `batteryEnabled` | Turns the shared neighbourhood battery on or off |
+| `batteryCapacityKwh` | Usable battery energy capacity |
+| `batteryMaxChargePowerKw` / `batteryMaxDischargePowerKw` | Grid-side charge and discharge power limits |
+| `batteryRoundTripEfficiency` | Charge/discharge round-trip efficiency (0–1) |
+| `batteryInitialSocPercent` | Battery state of charge after every reset (0–100) |
+| `batteryPeakThresholdKw` | Grid-import target; the battery discharges above this target |
 
 ## Running it
 
@@ -152,6 +163,10 @@ models:
 - **Public EV chargers** — each configured public charger independently and randomly
   gets "arrivals" (more likely 07:00–22:00), then draws its rated power for
   a 30–90 minute session before freeing up again.
+- **Neighbourhood battery** — a shared battery discharges up to its rated
+  power whenever raw neighbourhood import exceeds `batteryPeakThresholdKw`.
+  It charges only from PV surplus, so it does not introduce a new grid peak.
+  Round-trip losses are modelled symmetrically on charging and discharging.
 
 ### Weather & season
 
@@ -174,7 +189,10 @@ energy since start" panel. Each public charger has its own cumulative kWh
 meter too.
 
 The backend also keeps a rolling history of neighbourhood-wide totals
-(demand, generation, net grid import/export) for the time-series chart.
+(demand, generation, raw grid import, and battery-adjusted grid import) for
+the time-series chart. The chart overlays imports with and without the
+battery and the live battery card reports state of charge, power direction,
+and the peak reduction at the current tick.
 
 ## API
 

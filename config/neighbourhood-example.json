@@ -8,6 +8,13 @@
   "heatPumpProbability": 0.6,
   "pvProbability": 0.65,
   "evChargerProbability": 0.5,
+  "batteryEnabled": true,
+  "batteryCapacityKwh": 120.0,
+  "batteryMaxChargePowerKw": 60.0,
+  "batteryMaxDischargePowerKw": 60.0,
+  "batteryRoundTripEfficiency": 0.9,
+  "batteryInitialSocPercent": 80.0,
+  "batteryPeakThresholdKw": 75.0,
   "homeEvChargerPowerOptionsKw": [3.7, 7.4, 11.0],
   "publicChargers": [
     { "name": "Riverside - Kerbside 1", "powerKw": 11.0 },

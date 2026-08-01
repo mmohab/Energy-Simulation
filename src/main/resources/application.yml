@@ -46,6 +46,15 @@ neighbourhood:
   # A home EV charger's rated power is picked at random from this list.
   homeEvChargerPowerOptionsKw: [3.7, 7.4]
 
+  # Shared battery: discharges above the import target and charges from PV surplus.
+  batteryEnabled: true
+  batteryCapacityKwh: 100.0
+  batteryMaxChargePowerKw: 50.0
+  batteryMaxDischargePowerKw: 50.0
+  batteryRoundTripEfficiency: 0.90
+  batteryInitialSocPercent: 80.0
+  batteryPeakThresholdKw: 50.0
+
   # Public (non-household) EV charging points around the neighbourhood.
   # By default these are auto-generated: publicChargerCount points, each
   # given a random rated power from publicChargerPowerOptionsKw and a
