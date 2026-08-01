@@ -12,7 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -26,9 +28,12 @@ import java.util.Random;
  * houses (plus a handful of public EV chargers) over time.
  *
  * <p>Time advances in fixed-size ticks (default 10 minutes, 144/day —
- * configurable to 1/5/10/15/30/60 minutes via {@code neighbourhood.stepMinutes}),
- * starting from today's real calendar date so the simulated season lines up
- * with the month it's run in. Each tick every house's load is derived from:
+ * configurable to 1/5/10/15/30/60 minutes via {@code neighbourhood.stepMinutes}).
+ * By default the simulation starts today at midnight, so the simulated
+ * season lines up with the month it's run in; both the start date and the
+ * start time of day are configurable ({@code neighbourhood.startDate} /
+ * {@code neighbourhood.startTime}) if a specific starting moment is wanted
+ * instead. Each tick every house's load is derived from:
  * <ul>
  *   <li>a base household load curve (random per-house scale + daily shape),</li>
  *   <li>an optional heat pump, driven by a seasonal + daily outdoor-temperature model,</li>
@@ -96,6 +101,11 @@ public class SimulationEngine {
     private double cloudFactor = 0.85;
     private double tempOffset = 0.0; // day-to-day weather noise around the seasonal mean
     private LocalDate startDate = LocalDate.now();
+    // How many ticks into "day 1" the simulation begins — derived from the
+    // configured start time (e.g. 08:00) so tick 0 doesn't have to mean
+    // midnight. Applied via effectiveTick(), never to the raw tick counter
+    // itself (that stays "steps taken since simulation start").
+    private int startTickOffset = 0;
 
     // Neighbourhood-wide cumulative energy meters (kWh) since simulation start.
     private double cumulativeBaseLoadKwh;
@@ -139,7 +149,6 @@ public class SimulationEngine {
         tick = 0;
         cloudFactor = 0.85;
         tempOffset = 0.0;
-        startDate = LocalDate.now();
         history.clear();
 
         cumulativeBaseLoadKwh = 0;
@@ -198,6 +207,8 @@ public class SimulationEngine {
 
         return computeTick(false); // initial state at tick 0 — no time has elapsed yet, don't accumulate energy
     }
+
+    // Location descriptors used to auto-generate public charger names.
     private static final String[] PUBLIC_CHARGER_LOCATIONS = {
             "Village Green", "Supermarket Car Park", "Train Station", "Community Hall",
             "High Street", "Retail Park", "Sports Centre", "Library",
@@ -225,6 +236,42 @@ public class SimulationEngine {
         ticksPerDay = Math.max(1, Math.round(1440f / stepMinutes));
         tickHours = 24.0 / ticksPerDay;
         maxHistory = 3 * ticksPerDay; // 3 rolling days, whatever the resolution
+
+        // Start date: parse the configured value, falling back to today on
+        // anything blank or unparseable. Echoed back onto the config
+        // afterwards (same pattern as the random seed) so GET /config always
+        // reports exactly what's in use.
+        LocalDate resolvedStartDate;
+        String configuredDate = config.getStartDate();
+        try {
+            resolvedStartDate = (configuredDate == null || configuredDate.isBlank())
+                    ? LocalDate.now()
+                    : LocalDate.parse(configuredDate.trim());
+        } catch (DateTimeParseException e) {
+            resolvedStartDate = LocalDate.now();
+        }
+        startDate = resolvedStartDate;
+        config.setStartDate(startDate.format(DATE_FMT));
+
+        // Start time: parse "HH:mm", falling back to 00:00. Converted to a
+        // tick offset applied via effectiveTick() everywhere calendar
+        // date/time (and therefore weather/physics) is derived from the
+        // tick counter — the raw tick counter itself stays untouched so
+        // cumulative energy accounting and history indexing are unaffected.
+        double resolvedStartHour;
+        String configuredTime = config.getStartTime();
+        try {
+            if (configuredTime == null || configuredTime.isBlank()) {
+                resolvedStartHour = 0.0;
+            } else {
+                LocalTime parsed = LocalTime.parse(configuredTime.trim());
+                resolvedStartHour = parsed.getHour() + parsed.getMinute() / 60.0;
+            }
+        } catch (DateTimeParseException e) {
+            resolvedStartHour = 0.0;
+        }
+        config.setStartTime(formatTime(resolvedStartHour));
+        startTickOffset = (int) Math.round(resolvedStartHour / 24.0 * ticksPerDay);
 
         config.setHeatPumpProbability(clamp(config.getHeatPumpProbability(), 0.0, 1.0));
         config.setPvProbability(clamp(config.getPvProbability(), 0.0, 1.0));
@@ -267,8 +314,9 @@ public class SimulationEngine {
     // ------------------------------------------------------------------
 
     private SimulationSnapshot computeTick(boolean accumulate) {
-        int tickOfDay = (int) (tick % ticksPerDay);
-        double hour = hourOfDay(tick);
+        long effTick = effectiveTick();
+        int tickOfDay = (int) (effTick % ticksPerDay);
+        double hour = hourOfDay(effTick);
 
         if (tickOfDay == 0) {
             // Daily random walk on the weather offset around the seasonal mean.
@@ -339,8 +387,9 @@ public class SimulationEngine {
     }
 
     private SimulationSnapshot buildSnapshot() {
-        double hour = hourOfDay(tick);
-        int day = currentDay(tick);
+        long effTick = effectiveTick();
+        double hour = hourOfDay(effTick);
+        int day = currentDay(effTick);
         LocalDate date = currentDate();
         int dayOfYear = date.getDayOfYear();
         int month = date.getMonthValue();
@@ -583,8 +632,21 @@ public class SimulationEngine {
         return (int) (tick / ticksPerDay) + 1;
     }
 
+    /**
+     * The tick counter used for all calendar/time-of-day purposes (hour of
+     * day, day count, date, and therefore weather/season/physics). Differs
+     * from the raw {@code tick} field by {@link #startTickOffset}, so a
+     * configured start time other than midnight is reflected everywhere
+     * immediately — including at tick 0 — without the raw tick counter
+     * itself (used for cumulative accounting and history indexing) having
+     * to pretend any time has elapsed before the simulation actually began.
+     */
+    private long effectiveTick() {
+        return tick + startTickOffset;
+    }
+
     private LocalDate currentDate() {
-        return startDate.plusDays(currentDay(tick) - 1L);
+        return startDate.plusDays(currentDay(effectiveTick()) - 1L);
     }
 
     private static String formatTime(double hour) {

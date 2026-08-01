@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -16,11 +17,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * End-to-end tests hitting the real REST API against the real (shared,
- * singleton) SimulationEngine bean. Every test resets the simulation first
- * so results don't depend on execution order.
+ * singleton) SimulationEngine/NeighbourhoodConfig beans. Every test resets
+ * the simulation first via {@code @BeforeEach} so results don't depend on
+ * execution order — but {@code /reset} only regenerates *from* the current
+ * config, it doesn't clear config fields back to their defaults. Since
+ * several tests here POST config changes (seed, startDate/startTime,
+ * houseCount...) that would otherwise leak into whichever test runs next,
+ * the class is annotated {@code @DirtiesContext} to get a fresh Spring
+ * context — and therefore a fresh, default-valued config bean — after every
+ * test method. Slower than reusing one context, but correctness here
+ * matters more than speed for a test suite this small.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class SimulationControllerTest {
 
     @Autowired
@@ -108,6 +118,22 @@ class SimulationControllerTest {
         mockMvc.perform(get("/api/simulation/config"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.seed").value(4242));
+    }
+
+    @Test
+    void postConfigWithStartDateAndTimeIsReflectedInState() throws Exception {
+        mockMvc.perform(post("/api/simulation/config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startDate\": \"2026-06-15\", \"startTime\": \"08:30\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.simulatedDate").value("2026-06-15"))
+                .andExpect(jsonPath("$.timeLabel").value("08:30"))
+                .andExpect(jsonPath("$.day").value(1));
+
+        mockMvc.perform(get("/api/simulation/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startDate").value("2026-06-15"))
+                .andExpect(jsonPath("$.startTime").value("08:30"));
     }
 
     @Test

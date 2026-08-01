@@ -35,6 +35,14 @@ public class NeighbourhoodConfig {
     @Schema(description = "Simulation tick size in minutes.", example = "10", allowableValues = {"1", "5", "10", "15", "30", "60"})
     private int stepMinutes = 10;
 
+    @Schema(description = "Simulation start date (yyyy-MM-dd). Omit/null for today's date — the date "
+            + "actually used is always reported back here afterwards.", example = "2026-06-15", nullable = true)
+    private String startDate;
+
+    @Schema(description = "Simulation start time of day (HH:mm, 24h). Omit/null for 00:00 (midnight) — "
+            + "the time actually used is always reported back here afterwards.", example = "08:00", nullable = true)
+    private String startTime;
+
     @Schema(description = "Proportion (0.0-1.0) of houses with a heat pump.", example = "0.45")
     private double heatPumpProbability = 0.45;
     @Schema(description = "Proportion (0.0-1.0) of houses with PV/solar panels.", example = "0.55")
@@ -79,6 +87,12 @@ public class NeighbourhoodConfig {
 
     public int getStepMinutes() { return stepMinutes; }
     public void setStepMinutes(int stepMinutes) { this.stepMinutes = stepMinutes; }
+
+    public String getStartDate() { return startDate; }
+    public void setStartDate(String startDate) { this.startDate = startDate; }
+
+    public String getStartTime() { return startTime; }
+    public void setStartTime(String startTime) { this.startTime = startTime; }
 
     public double getHeatPumpProbability() { return heatPumpProbability; }
     public void setHeatPumpProbability(double heatPumpProbability) { this.heatPumpProbability = heatPumpProbability; }

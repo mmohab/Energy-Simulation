@@ -49,12 +49,23 @@ is always reported back via `GET /api/simulation/config` (and shown at the
 bottom of the page), so any run can be reproduced later by plugging that
 value back in.
 
+**Start date/time:** by default the simulation starts "today, at
+midnight" — set `neighbourhood.startDate` (`yyyy-MM-dd`) and/or
+`neighbourhood.startTime` (`HH:mm`, 24h) to begin somewhere else instead,
+e.g. a specific date for a chosen season, or a specific time of day (an
+evening start immediately shows heat pumps/EV charging/peak demand rather
+than the quiet overnight hours). Like the seed, whatever's actually in use
+is always reported back via `GET /api/simulation/config`, and invalid or
+blank values just fall back to the default rather than erroring.
+
 Configurable fields (`NeighbourhoodConfig`):
 
 | Field | Meaning |
 |---|---|
 | `seed` | Fixed random seed, or omit for a random one each reset |
 | `stepMinutes` | Simulation tick size in minutes — 1, 5, 10, 15, 30, or 60 all work well |
+| `startDate` | Simulation start date (`yyyy-MM-dd`), or omit for today |
+| `startTime` | Simulation start time of day (`HH:mm`, 24h), or omit for 00:00 (midnight) |
 | `houseCount` | Number of houses |
 | `heatPumpProbability` / `pvProbability` / `evChargerProbability` | Proportion (0–1) of houses with each asset, assigned independently |
 | `heatPumpKwMin` / `heatPumpKwMax` | Heat pump electrical capacity range |
@@ -108,9 +119,13 @@ mvn test
 
 Time advances in **fixed-size ticks** — 10 minutes by default (144/day),
 configurable to 1, 5, 15, 30, or 60 minutes via `neighbourhood.stepMinutes`
-(config file, runtime API, or the "⚙ Configure" panel's step-size dropdown)
-— starting from today's
-real calendar date so the simulated season matches the month it's run in.
+(config file, runtime API, or the "⚙ Configure" panel's step-size dropdown).
+By default the simulation starts today at midnight, so the simulated season
+matches the month it's run in — both the start date and start time of day
+are configurable too (`neighbourhood.startDate` / `neighbourhood.startTime`),
+and take effect immediately at tick 0: weather, PV output, heat pump load,
+and EV/public-charger activity all reflect whatever moment you start at,
+not just the calendar day.
 Each tick, every house's load and generation is derived from simple physical
 models:
 

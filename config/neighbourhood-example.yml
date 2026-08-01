@@ -13,6 +13,8 @@
 neighbourhood:
   seed: 42                     # fixed seed -> identical neighbourhood + weather every run
   stepMinutes: 5                 # finer-grained 5-minute ticks
+  startDate: 2026-01-10           # a winter's day...
+  startTime: 18:00                 # ...starting in the evening peak
   houseCount: 15                # a smaller street
   heatPumpProbability: 0.80      # a heavily electrified-heating street
   pvProbability: 0.70

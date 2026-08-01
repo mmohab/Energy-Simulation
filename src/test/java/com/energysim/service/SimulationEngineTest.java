@@ -244,6 +244,101 @@ class SimulationEngineTest {
     }
 
     // ------------------------------------------------------------------
+    // Configurable start date / time
+    // ------------------------------------------------------------------
+
+    @Nested
+    class StartDateAndTime {
+
+        @Test
+        void defaultsToTodayAtMidnight() {
+            SimulationEngine engine = new SimulationEngine(configWithSeed(1L));
+            SimulationSnapshot snapshot = engine.currentSnapshot();
+
+            assertThat(snapshot.timeLabel()).isEqualTo("00:00");
+            assertThat(snapshot.simulatedDate()).isEqualTo(java.time.LocalDate.now().toString());
+        }
+
+        @Test
+        void honorsConfiguredStartDateAndTimeFromTickZero() {
+            NeighbourhoodConfig config = configWithSeed(1L);
+            config.setStartDate("2026-06-15");
+            config.setStartTime("08:30");
+
+            SimulationEngine engine = new SimulationEngine(config);
+            SimulationSnapshot snapshot = engine.currentSnapshot();
+
+            assertThat(snapshot.simulatedDate()).isEqualTo("2026-06-15");
+            assertThat(snapshot.timeLabel()).isEqualTo("08:30");
+            assertThat(snapshot.day()).isEqualTo(1);
+        }
+
+        @Test
+        void invalidStartDateFallsBackToToday() {
+            NeighbourhoodConfig config = configWithSeed(1L);
+            config.setStartDate("not-a-date");
+
+            SimulationEngine engine = new SimulationEngine(config);
+
+            assertThat(engine.currentSnapshot().simulatedDate())
+                    .isEqualTo(java.time.LocalDate.now().toString());
+        }
+
+        @Test
+        void invalidStartTimeFallsBackToMidnight() {
+            NeighbourhoodConfig config = configWithSeed(1L);
+            config.setStartTime("not-a-time");
+
+            SimulationEngine engine = new SimulationEngine(config);
+
+            assertThat(engine.currentSnapshot().timeLabel()).isEqualTo("00:00");
+        }
+
+        @Test
+        void resolvedStartDateAndTimeAreEchoedBackOntoConfig() {
+            NeighbourhoodConfig config = configWithSeed(1L);
+            config.setStartTime("14:00");
+            // startDate left unset -> should resolve to today and be echoed back.
+
+            SimulationEngine engine = new SimulationEngine(config);
+
+            assertThat(engine.getConfig().getStartTime()).isEqualTo("14:00");
+            assertThat(engine.getConfig().getStartDate())
+                    .isEqualTo(java.time.LocalDate.now().toString());
+        }
+
+        @Test
+        void dayAdvancesCorrectlyWhenStartingLateInTheDay() {
+            NeighbourhoodConfig config = configWithSeed(1L);
+            config.setStepMinutes(60); // hourly ticks, easy to reason about
+            config.setStartTime("23:00");
+
+            SimulationEngine engine = new SimulationEngine(config);
+            assertThat(engine.currentSnapshot().day()).isEqualTo(1);
+            assertThat(engine.currentSnapshot().timeLabel()).isEqualTo("23:00");
+
+            engine.step(); // one hour later -> rolls into 00:00 the next day
+
+            assertThat(engine.currentSnapshot().timeLabel()).isEqualTo("00:00");
+            assertThat(engine.currentSnapshot().day()).isEqualTo(2);
+        }
+
+        @Test
+        void startTimeOffsetDoesNotAffectCumulativeEnergyAtTickZero() {
+            NeighbourhoodConfig config = configWithSeed(1L);
+            config.setStartTime("18:00"); // evening start — heat pumps/EVs likely already drawing power
+
+            SimulationEngine engine = new SimulationEngine(config);
+            SimulationSnapshot snapshot = engine.currentSnapshot();
+
+            // Regardless of how much *instantaneous* power is showing at tick 0,
+            // no simulated time has elapsed yet, so cumulative meters must be zero.
+            assertThat(snapshot.cumulativeDemandKwh()).isZero();
+            assertThat(snapshot.cumulativeGenerationKwh()).isZero();
+        }
+    }
+
+    // ------------------------------------------------------------------
     // Energy accounting
     // ------------------------------------------------------------------
 

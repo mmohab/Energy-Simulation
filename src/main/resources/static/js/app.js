@@ -275,6 +275,8 @@ el('detailClose').addEventListener('click', () => {
 async function loadConfigIntoForm() {
   const cfg = await apiGet('/config');
   el('cfgSeed').value = cfg.seed ?? '';
+  el('cfgStartDate').value = cfg.startDate ?? '';
+  el('cfgStartTime').value = cfg.startTime ?? '';
   el('cfgStepMinutes').value = String(cfg.stepMinutes ?? 10);
   el('cfgHouseCount').value = cfg.houseCount;
   el('cfgHeatPumpPct').value = Math.round(cfg.heatPumpProbability * 100);
@@ -290,6 +292,8 @@ async function loadConfigIntoForm() {
 
 async function applyConfigFromForm() {
   const seedRaw = el('cfgSeed').value.trim();
+  const startDateRaw = el('cfgStartDate').value.trim();
+  const startTimeRaw = el('cfgStartTime').value.trim();
   const updates = {
     houseCount: parseInt(el('cfgHouseCount').value, 10) || 30,
     stepMinutes: parseInt(el('cfgStepMinutes').value, 10) || 10,
@@ -299,6 +303,8 @@ async function applyConfigFromForm() {
     publicChargerCount: parseInt(el('cfgPublicChargerCount').value, 10) || 0,
     publicChargers: [], // applying from this panel always switches to count-based auto-generation
     seed: seedRaw === '' ? null : parseInt(seedRaw, 10),
+    startDate: startDateRaw === '' ? null : startDateRaw,
+    startTime: startTimeRaw === '' ? null : startTimeRaw,
   };
   pause();
   const res = await fetch(`${API}/config`, {

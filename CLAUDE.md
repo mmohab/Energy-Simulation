@@ -92,10 +92,23 @@ push infra needed. Chart.js loaded from a CDN in `index.html`.
   sizes that don't evenly divide 1440 (e.g. 7 minutes). These are **instance
   fields, not constants** — they're recomputed on every `reset()`, which is
   why `hourOfDay()`/`currentDay()` are instance methods, not static.
-- **Simulated calendar starts at `LocalDate.now()`** on every reset, so the
-  simulated season matches whatever month the app happens to be started in.
-  This was a deliberate choice for demo relatability, not a requirement —
-  revisit if a fixed/configurable start date is ever wanted.
+- **Simulated calendar defaults to `LocalDate.now()` at midnight**, but both
+  the start date and start time of day are now configurable
+  (`NeighbourhoodConfig.startDate`/`startTime`, resolved and echoed back
+  onto config in `normalizeConfig()` — same pattern as `seed`, see below).
+  A non-midnight start is implemented via `startTickOffset` (ticks into
+  "day 1" that the configured start time corresponds to) and an
+  `effectiveTick()` helper (`tick + startTickOffset`) that **every**
+  calendar-derived value goes through — `hourOfDay()`, `currentDay()`,
+  `currentDate()`, and therefore the weather/season/physics models too, so
+  a configured start time takes effect immediately at tick 0, not just the
+  displayed clock. The **raw `tick` field is deliberately never offset** —
+  it stays "steps taken since simulation start" for cumulative-energy
+  accounting and history indexing, exactly the same reasoning as the
+  reset()-shouldn't-accumulate-energy fix below. If you add another place
+  that derives "what hour/day/date is it", route it through
+  `effectiveTick()`, not the raw `tick` field, or it'll silently ignore a
+  configured start time.
 - **Random seed**: if `config.seed` is null, `reset()` generates one and
   **writes it back onto `config.seed`** so `GET /api/simulation/config`
   always reports the seed actually in use (reproducibility without the
@@ -234,19 +247,32 @@ panel or stays "advanced."
   test`): `HouseTest`/`PublicChargerTest` (plain unit tests, no Spring
   context), `SimulationEngineTest` (the bulk of the coverage — generation,
   seed reproducibility, tick/day/step-size math including odd step sizes,
-  energy accounting invariants, physical-model sanity bounds, config
-  normalization and the partial-update merge behavior), and
-  `SimulationControllerTest` (`@SpringBootTest` + MockMvc against the real
-  API). It has been run once for real (outside this sandbox) and caught two
-  genuine energy-accounting bugs on the first try — see the "Cumulative
-  energy meters" entry above for what they were and how they were fixed.
-  That fix has **not yet been re-verified with another real test run** —
-  do that before assuming it's actually correct now, not just
+  configurable start date/time including the day-rollover edge case of
+  starting late in the day, energy accounting invariants, physical-model
+  sanity bounds, config normalization and the partial-update merge
+  behavior), and `SimulationControllerTest` (`@SpringBootTest` + MockMvc
+  against the real API). It has been run once for real (outside this
+  sandbox) and caught two genuine energy-accounting bugs on the first try —
+  see the "Cumulative energy meters" entry above for what they were and how
+  they were fixed. That fix has **not yet been re-verified with another
+  real test run**, and neither has the subsequently-added start-date/time
+  work — do that before assuming either is actually correct, not just
   plausible-on-paper. Not covered yet: the weather/season model in
   isolation (temperature curve across month/day-of-year boundaries,
   sunrise/sunset math), the frontend (`app.js` has zero test coverage — no
   test runner is even wired up for it), and there's no CI pipeline running
   any of this automatically.
+- `SimulationControllerTest` is annotated `@DirtiesContext(classMode =
+  AFTER_EACH_TEST_METHOD)` for a real reason, not caution-for-its-own-sake:
+  it hits the real API against a shared, mutable `NeighbourhoodConfig`
+  singleton, and `/reset` only regenerates *from* the current config — it
+  doesn't clear fields back to defaults. A test that POSTs e.g. a custom
+  `startTime` would otherwise leak it into whichever test ran next (JUnit
+  doesn't guarantee method order) and break that test's assumptions. If you
+  add config-mutating tests to a *different* `@SpringBootTest` class later,
+  apply the same annotation or restore the mutated fields explicitly —
+  don't assume `@BeforeEach` alone makes tests order-independent when they
+  share a mutable singleton bean.
 - If you add a new field to `SimulationSnapshot`/`HouseSnapshot`/etc., add
   or update the corresponding assertions in `SimulationEngineTest` — it's
   the main thing currently guarding against the "record argument order"

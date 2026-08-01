@@ -23,6 +23,12 @@ neighbourhood:
   # exactly 24h). Smaller = smoother/more detailed but more ticks per day.
   stepMinutes: 10
 
+  # Simulation start date (yyyy-MM-dd) and time of day (HH:mm, 24h). Leave
+  # both commented out for "today, at midnight" — the values actually used
+  # are always reported back via GET /api/simulation/config.
+  # startDate: 2026-06-15
+  # startTime: 08:00
+
   # Proportion (0.0 - 1.0) of houses that own each asset. Independent of
   # each other, so a house can end up with any combination.
   heatPumpProbability: 0.45
