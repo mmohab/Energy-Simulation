@@ -6,5 +6,7 @@ Allow Simulation configuration via fixed-seed random generator with configurable
 Add Swagger and open AI integrations.
 Generate unit tests for the project.
 Add configurable simulation start date and time.
-Add model, configuration logic for Neighbourhood battery, battery has Capacity (kWh), Max charge/discharge power (kW), Round-trip efficiency
+Add model, configuration logic for Neighbourhood battery, battery has these properties: Capacity (kWh), Max charge/discharge power (kW), Round-trip efficiency
+Update simulation logic to reduce peaksby keeping neighbourhood load below a threshold, or discharge during top N% load periods
+Update UI to show net neighbourhood load with and without battery, show battery power and state-of-charge and Highlight peak shaving effect
 Organize UI into 2 vertical panels, one for simulation and neighbourhood settings and other for battery settings
