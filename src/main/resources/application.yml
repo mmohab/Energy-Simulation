@@ -41,16 +41,17 @@ neighbourhood:
   homeEvChargerPowerOptionsKw: [3.7, 7.4]
 
   # Public (non-household) EV charging points around the neighbourhood.
-  publicChargers:
-    - name: "Village Green - Kerbside 1"
-      powerKw: 11.0
-    - name: "Village Green - Kerbside 2"
-      powerKw: 11.0
-    - name: "Supermarket Car Park - Rapid A"
-      powerKw: 50.0
-    - name: "Supermarket Car Park - Rapid B"
-      powerKw: 50.0
-    - name: "Train Station - Kerbside"
-      powerKw: 22.0
-    - name: "Community Hall - Kerbside"
-      powerKw: 22.0
+  # By default these are auto-generated: publicChargerCount points, each
+  # given a random rated power from publicChargerPowerOptionsKw and a
+  # generated name (e.g. "Supermarket Car Park - Rapid Hub 3").
+  publicChargerCount: 6
+  publicChargerPowerOptionsKw: [11.0, 22.0, 50.0]
+
+  # Uncomment to fully hand-pick the roster instead — when this list is
+  # non-empty it overrides publicChargerCount/publicChargerPowerOptionsKw
+  # entirely, giving you exactly these chargers with these names.
+  # publicChargers:
+  #   - name: "Village Green - Kerbside 1"
+  #     powerKw: 11.0
+  #   - name: "Supermarket Car Park - Rapid A"
+  #     powerKw: 50.0

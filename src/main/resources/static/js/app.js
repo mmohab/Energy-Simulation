@@ -280,6 +280,9 @@ async function loadConfigIntoForm() {
   el('cfgHeatPumpPct').value = Math.round(cfg.heatPumpProbability * 100);
   el('cfgPvPct').value = Math.round(cfg.pvProbability * 100);
   el('cfgEvPct').value = Math.round(cfg.evChargerProbability * 100);
+  el('cfgPublicChargerCount').value = cfg.publicChargers && cfg.publicChargers.length > 0
+    ? cfg.publicChargers.length
+    : cfg.publicChargerCount;
   el('footerSeed').textContent = cfg.seed ?? '–';
   stepMinutes = cfg.stepMinutes ?? 10;
   updateStepLabels();
@@ -293,6 +296,8 @@ async function applyConfigFromForm() {
     heatPumpProbability: clampPct(el('cfgHeatPumpPct').value) / 100,
     pvProbability: clampPct(el('cfgPvPct').value) / 100,
     evChargerProbability: clampPct(el('cfgEvPct').value) / 100,
+    publicChargerCount: parseInt(el('cfgPublicChargerCount').value, 10) || 0,
+    publicChargers: [], // applying from this panel always switches to count-based auto-generation
     seed: seedRaw === '' ? null : parseInt(seedRaw, 10),
   };
   pause();

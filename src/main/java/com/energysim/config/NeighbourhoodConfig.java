@@ -53,18 +53,21 @@ public class NeighbourhoodConfig {
 
     private List<Double> homeEvChargerPowerOptionsKw = new ArrayList<>(List.of(3.7, 7.4));
 
-    private List<PublicChargerConfig> publicChargers = defaultPublicChargers();
+    @Schema(description = "Number of public EV charging points around the neighbourhood. Ignored if "
+            + "publicChargers is explicitly given (non-empty) — that list takes precedence.", example = "6")
+    private int publicChargerCount = 6;
 
-    public static List<PublicChargerConfig> defaultPublicChargers() {
-        List<PublicChargerConfig> list = new ArrayList<>();
-        list.add(new PublicChargerConfig("Village Green - Kerbside 1", 11.0));
-        list.add(new PublicChargerConfig("Village Green - Kerbside 2", 11.0));
-        list.add(new PublicChargerConfig("Supermarket Car Park - Rapid A", 50.0));
-        list.add(new PublicChargerConfig("Supermarket Car Park - Rapid B", 50.0));
-        list.add(new PublicChargerConfig("Train Station - Kerbside", 22.0));
-        list.add(new PublicChargerConfig("Community Hall - Kerbside", 22.0));
-        return list;
-    }
+    @Schema(description = "Possible rated power (kW) for auto-generated public chargers; one is picked "
+            + "at random per charger.", example = "[11.0, 22.0, 50.0]")
+    private List<Double> publicChargerPowerOptionsKw = new ArrayList<>(List.of(11.0, 22.0, 50.0));
+
+    /**
+     * Optional explicit roster ({@code { name, powerKw }} per entry). When non-empty this fully
+     * overrides {@link #publicChargerCount} / {@link #publicChargerPowerOptionsKw} — the neighbourhood
+     * gets exactly these chargers, in this order, with these names. Leave empty (the default) to have
+     * the given count auto-generated instead.
+     */
+    private List<PublicChargerConfig> publicChargers = new ArrayList<>();
 
     // --- getters / setters -------------------------------------------------
 
@@ -106,6 +109,12 @@ public class NeighbourhoodConfig {
 
     public List<Double> getHomeEvChargerPowerOptionsKw() { return homeEvChargerPowerOptionsKw; }
     public void setHomeEvChargerPowerOptionsKw(List<Double> homeEvChargerPowerOptionsKw) { this.homeEvChargerPowerOptionsKw = homeEvChargerPowerOptionsKw; }
+
+    public int getPublicChargerCount() { return publicChargerCount; }
+    public void setPublicChargerCount(int publicChargerCount) { this.publicChargerCount = publicChargerCount; }
+
+    public List<Double> getPublicChargerPowerOptionsKw() { return publicChargerPowerOptionsKw; }
+    public void setPublicChargerPowerOptionsKw(List<Double> publicChargerPowerOptionsKw) { this.publicChargerPowerOptionsKw = publicChargerPowerOptionsKw; }
 
     public List<PublicChargerConfig> getPublicChargers() { return publicChargers; }
     public void setPublicChargers(List<PublicChargerConfig> publicChargers) { this.publicChargers = publicChargers; }

@@ -179,11 +179,38 @@ public class SimulationEngine {
         }
 
         int chargerId = 1;
-        for (NeighbourhoodConfig.PublicChargerConfig cc : config.getPublicChargers()) {
-            publicChargers.add(new PublicCharger(chargerId++, cc.getName(), cc.getPowerKw()));
+        List<NeighbourhoodConfig.PublicChargerConfig> explicitRoster = config.getPublicChargers();
+        if (!explicitRoster.isEmpty()) {
+            // An explicit roster was given — use it exactly as configured.
+            for (NeighbourhoodConfig.PublicChargerConfig cc : explicitRoster) {
+                publicChargers.add(new PublicCharger(chargerId++, cc.getName(), cc.getPowerKw()));
+            }
+        } else {
+            // No explicit roster — auto-generate publicChargerCount chargers with a
+            // random power rating per charger, drawn from publicChargerPowerOptionsKw.
+            List<Double> powerOptions = config.getPublicChargerPowerOptionsKw();
+            for (int i = 1; i <= config.getPublicChargerCount(); i++) {
+                double powerKw = powerOptions.get(rng.nextInt(powerOptions.size()));
+                publicChargers.add(new PublicCharger(chargerId, publicChargerName(chargerId, powerKw), powerKw));
+                chargerId++;
+            }
         }
 
         return computeTick();
+    }
+
+    // Location descriptors used to auto-generate public charger names.
+    private static final String[] PUBLIC_CHARGER_LOCATIONS = {
+            "Village Green", "Supermarket Car Park", "Train Station", "Community Hall",
+            "High Street", "Retail Park", "Sports Centre", "Library",
+            "Town Hall", "Park & Ride", "Leisure Centre", "Market Square"
+    };
+
+    /** Builds a realistic-sounding charger name from its position and power tier. */
+    private String publicChargerName(int index, double powerKw) {
+        String location = PUBLIC_CHARGER_LOCATIONS[(index - 1) % PUBLIC_CHARGER_LOCATIONS.length];
+        String tier = powerKw >= 40 ? "Rapid Hub" : (powerKw >= 20 ? "Fast Charger" : "Kerbside Point");
+        return location + " - " + tier + " " + index;
     }
 
     /** Clamps/repairs configuration values so a bad external file can't crash generation. */
@@ -217,8 +244,13 @@ public class SimulationEngine {
         if (config.getHomeEvChargerPowerOptionsKw() == null || config.getHomeEvChargerPowerOptionsKw().isEmpty()) {
             config.setHomeEvChargerPowerOptionsKw(new ArrayList<>(List.of(7.4)));
         }
-        if (config.getPublicChargers() == null || config.getPublicChargers().isEmpty()) {
-            config.setPublicChargers(NeighbourhoodConfig.defaultPublicChargers());
+
+        config.setPublicChargerCount(clampInt(config.getPublicChargerCount(), 0, 200));
+        if (config.getPublicChargerPowerOptionsKw() == null || config.getPublicChargerPowerOptionsKw().isEmpty()) {
+            config.setPublicChargerPowerOptionsKw(new ArrayList<>(List.of(11.0)));
+        }
+        if (config.getPublicChargers() == null) {
+            config.setPublicChargers(new ArrayList<>());
         }
     }
 

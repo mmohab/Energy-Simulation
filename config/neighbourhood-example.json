@@ -1,5 +1,5 @@
 {
-  "_comment": "POST this file's contents to /api/simulation/config to reconfigure and regenerate the neighbourhood at runtime. Only the fields present here are changed.",
+  "_comment": "POST this file's contents to /api/simulation/config to reconfigure and regenerate the neighbourhood at runtime. Only the fields present here are changed. Note: publicChargers here is an explicit roster, which overrides publicChargerCount/publicChargerPowerOptionsKw entirely — see neighbourhood-example.yml for the simpler count-based alternative.",
   "seed": 1234,
   "stepMinutes": 15,
   "houseCount": 40,

@@ -1,17 +1,17 @@
 # Neighbourhood Energy Simulation
 
 A Spring Boot web app that simulates electricity use and generation across a
-neighbourhood of 30 houses plus 6 public EV chargers, and visualizes it live
-as time advances (10-minute steps by default — configurable to 1/5/15/30/60
-minutes).
+neighbourhood of houses (30 by default) plus public EV chargers (6 by
+default), and visualizes it live as time advances (10-minute steps by
+default — configurable to 1/5/15/30/60 minutes).
 
 Some houses have a **heat pump** 🔥, some have **PV / solar panels** ☀️, some
 have a **home EV charger** 🔌 — and houses can have any combination (or none)
 of the three. On every reset, assets are assigned randomly (heat pump ~45%,
 PV ~55%, EV charger ~40% of houses) with randomised capacities per house.
-Alongside the houses, **6 public EV charging points** 🅿️ (a mix of slow
-kerbside AC and rapid DC hubs) serve randomly arriving vehicles throughout
-the day.
+Alongside the houses, **public EV charging points** 🅿️ (a mix of slow
+kerbside AC and rapid DC hubs, auto-generated to the configured count) serve
+randomly arriving vehicles throughout the day.
 
 ## Configuration
 
@@ -61,7 +61,9 @@ Configurable fields (`NeighbourhoodConfig`):
 | `pvKwMin` / `pvKwMax` | PV array capacity range |
 | `baseLoadFactorMin` / `baseLoadFactorMax` | Household size/usage scale range |
 | `homeEvChargerPowerOptionsKw` | Possible home EV charger power ratings (one picked at random per EV house) |
-| `publicChargers` | List of `{ name, powerKw }` public charging points |
+| `publicChargerCount` | Number of public EV chargers to auto-generate (ignored if `publicChargers` is non-empty) |
+| `publicChargerPowerOptionsKw` | Possible rated power for auto-generated public chargers (one picked at random per charger) |
+| `publicChargers` | Optional explicit roster of `{ name, powerKw }` — when non-empty, fully overrides `publicChargerCount`/`publicChargerPowerOptionsKw` with exactly these chargers |
 
 ## Running it
 
@@ -111,7 +113,7 @@ models:
   sunrise/sunset, peak at midday, scaled down in winter) multiplied by each
   array's capacity and a slowly wandering, neighbourhood-wide cloud-cover
   factor.
-- **Public EV chargers** — each of the 6 points independently and randomly
+- **Public EV chargers** — each configured public charger independently and randomly
   gets "arrivals" (more likely 07:00–22:00), then draws its rated power for
   a 30–90 minute session before freeing up again.
 
@@ -159,7 +161,7 @@ Chart.js (via CDN) for the demand/generation time-series chart. The
 "street" view renders all 30 houses as tiles that glow amber when importing
 power and teal when exporting, with brightness proportional to the flow —
 a way of watching the neighbourhood's grid draw across a full day. Below it,
-a public-charger panel shows each of the 6 stations' occupancy and live
+a public-charger panel shows every station's occupancy and live
 load, and a cumulative-energy panel compares kWh totals per asset class
 since the simulation started. The house registry table and click-to-inspect
 detail panel show the load/generation breakdown — including cumulative
