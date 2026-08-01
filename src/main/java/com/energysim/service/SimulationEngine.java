@@ -196,10 +196,8 @@ public class SimulationEngine {
             }
         }
 
-        return computeTick();
+        return computeTick(false); // initial state at tick 0 — no time has elapsed yet, don't accumulate energy
     }
-
-    // Location descriptors used to auto-generate public charger names.
     private static final String[] PUBLIC_CHARGER_LOCATIONS = {
             "Village Green", "Supermarket Car Park", "Train Station", "Community Hall",
             "High Street", "Retail Park", "Sports Centre", "Library",
@@ -257,7 +255,7 @@ public class SimulationEngine {
     /** Advances the simulation by one tick (size set by config.stepMinutes) and returns the new state. */
     public synchronized SimulationSnapshot step() {
         tick++;
-        return computeTick();
+        return computeTick(true); // a tick's worth of time just elapsed — accumulate its energy
     }
 
     public synchronized SimulationSnapshot currentSnapshot() {
@@ -268,7 +266,7 @@ public class SimulationEngine {
     // Per-tick computation
     // ------------------------------------------------------------------
 
-    private SimulationSnapshot computeTick() {
+    private SimulationSnapshot computeTick(boolean accumulate) {
         int tickOfDay = (int) (tick % ticksPerDay);
         double hour = hourOfDay(tick);
 
@@ -305,17 +303,27 @@ public class SimulationEngine {
             house.setCurrentHeatPumpLoadKw(heatPump);
             house.setCurrentEvLoadKw(ev);
             house.setCurrentPvGenerationKw(pv);
-            house.accumulate(tickHours);
 
-            cumulativeBaseLoadKwh += base * tickHours;
-            cumulativeHeatPumpKwh += heatPump * tickHours;
-            cumulativeEvHomeKwh += ev * tickHours;
-            cumulativePvKwh += pv * tickHours;
+            if (accumulate) {
+                house.accumulate(tickHours);
+                cumulativeBaseLoadKwh += base * tickHours;
+                cumulativeHeatPumpKwh += heatPump * tickHours;
+                cumulativeEvHomeKwh += ev * tickHours;
+                cumulativePvKwh += pv * tickHours;
+            }
         }
 
         for (PublicCharger charger : publicChargers) {
-            tickPublicCharger(charger, hour);
-            cumulativeEvPublicKwh += charger.getCurrentLoadKw() * tickHours;
+            // tickPublicCharger returns the load (kW) that actually applied during
+            // this tick, captured BEFORE any end-of-session reset — reading
+            // charger.getCurrentLoadKw() afterwards would silently miss the final
+            // tick of a session that just ended (it gets zeroed out as part of
+            // freeing the charger).
+            double load = tickPublicCharger(charger, hour);
+            if (accumulate) {
+                charger.addCumulativeEnergyKwh(load * tickHours);
+                cumulativeEvPublicKwh += load * tickHours;
+            }
         }
 
         SimulationSnapshot snapshot = buildSnapshot();
@@ -472,17 +480,23 @@ public class SimulationEngine {
     // Public charger model
     // ------------------------------------------------------------------
 
-    private void tickPublicCharger(PublicCharger charger, double hour) {
+    /**
+     * Advances one public charger's occupancy/load state by one tick and
+     * returns the load (kW) that applied *during* this tick — captured
+     * before any end-of-session reset, so the caller can account energy
+     * correctly even on the tick a session ends (see the comment at the
+     * call site in {@link #computeTick}).
+     */
+    private double tickPublicCharger(PublicCharger charger, double hour) {
         if (charger.isOccupied()) {
             double load = charger.getPowerKw() * (1.0 + (rng.nextDouble() - 0.5) * 0.05);
             charger.setCurrentLoadKw(load);
-            charger.addCumulativeEnergyKwh(load * tickHours);
             charger.setRemainingTicks(charger.getRemainingTicks() - 1);
             if (charger.getRemainingTicks() <= 0) {
                 charger.setOccupied(false);
-                charger.setCurrentLoadKw(0.0);
+                charger.setCurrentLoadKw(0.0); // charger reads as free again from next tick
             }
-            return;
+            return load;
         }
 
         double arrivalsPerHour = (hour >= 7 && hour < 22) ? 0.35 : 0.05;
@@ -493,10 +507,11 @@ public class SimulationEngine {
             charger.setRemainingTicks(minTicks + rng.nextInt(maxTicks - minTicks + 1));
             double load = charger.getPowerKw() * (0.85 + rng.nextDouble() * 0.15);
             charger.setCurrentLoadKw(load);
-            charger.addCumulativeEnergyKwh(load * tickHours);
-        } else {
-            charger.setCurrentLoadKw(0.0);
+            return load;
         }
+
+        charger.setCurrentLoadKw(0.0);
+        return 0.0;
     }
 
     // ------------------------------------------------------------------

@@ -83,6 +83,27 @@ java -jar target/neighbourhood-energy-sim-1.0.0.jar
 
 Then open **http://localhost:8080**.
 
+## Testing
+
+```bash
+mvn test
+```
+
+- `HouseTest` / `PublicChargerTest` — plain unit tests for the domain
+  models (load/net calculations, cumulative meter accumulation), no Spring
+  context needed.
+- `SimulationEngineTest` — the main coverage: neighbourhood generation
+  against configured proportions/counts, seed reproducibility (same seed →
+  identical trajectory; different seeds → different neighbourhoods), tick/
+  day/step-size math (including step sizes that don't evenly divide 1440
+  minutes), energy-accounting invariants (total demand = sum of parts, net
+  import = demand − generation, cumulative meters never decrease), sanity
+  bounds on the physical models, and config validation/normalization
+  (clamping, range-swapping, partial-update merging).
+- `SimulationControllerTest` — `@SpringBootTest` + MockMvc tests against
+  the real REST API (state/step/reset/config endpoints, including the
+  400-on-bad-config path).
+
 ## How the simulation works
 
 Time advances in **fixed-size ticks** — 10 minutes by default (144/day),
@@ -180,6 +201,10 @@ src/main/java/com/energysim/
 src/main/resources/
   application.yml   default neighbourhood configuration
   static/           index.html, css/style.css, js/app.js
+src/test/java/com/energysim/
+  model/          HouseTest, PublicChargerTest
+  service/        SimulationEngineTest
+  controller/     SimulationControllerTest
 config/
   neighbourhood-example.yml   example external config override
   neighbourhood-example.json  example runtime /api/simulation/config payload

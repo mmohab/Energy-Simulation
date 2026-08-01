@@ -131,7 +131,25 @@ push infra needed. Chart.js loaded from a CDN in `index.html`.
   neighbourhood-wide per asset class (`SimulationEngine.cumulativeXxxKwh`
   fields). All three need to stay in sync if you change how any load
   category is computed — search for `tickHours` multiplications in
-  `computeTick()`.
+  `computeTick()`. **This has already broken twice** (both caught by
+  `SimulationEngineTest`, not by manual review — a concrete argument for
+  keeping that test class healthy):
+  1. `computeTick()` is called once from `reset()` (to populate the initial
+     tick-0 snapshot) and once per `step()`. It used to accumulate energy
+     unconditionally on *every* call — including reset's, which represents
+     zero elapsed time. Fix: `computeTick(boolean accumulate)`; `reset()`
+     passes `false`, `step()` passes `true`. If you add a third caller of
+     `computeTick`, decide deliberately whether it represents elapsed time.
+  2. The public-charger loop used to read `charger.getCurrentLoadKw()`
+     *after* `tickPublicCharger()` had already reset it to `0.0` (which
+     happens when a charging session ends mid-tick) — so the neighbourhood-
+     wide `cumulativeEvPublicKwh` silently dropped the final tick of every
+     completed session, while the charger's own meter (which accumulated
+     *before* that reset) kept it. Fix: `tickPublicCharger()` now returns
+     the tick's true load, captured before any end-of-session mutation, and
+     both the per-charger and neighbourhood-wide accumulation happen from
+     that single returned value at the call site — one source of truth
+     instead of two code paths that could drift apart.
 - **`NeighbourhoodConfig.normalizeConfig()`** is a defensive clamp/repair
   pass run at the top of every `reset()` — it exists so a malformed external
   config file or a bad partial API update can't crash generation (e.g.
@@ -212,11 +230,27 @@ panel or stays "advanced."
 
 - **Never compiled in this sandbox** (see "Build / run" above) — the single
   biggest risk area. Run a real build before trusting any of this blindly.
-- No test suite exists at all (`spring-boot-starter-test` is a pom
-  dependency but nothing uses it yet). If you're doing substantial work
-  here, adding tests for `SimulationEngine` (deterministic given a fixed
-  seed — great for snapshot-style assertions) would pay for itself
-  immediately, especially against the "records: argument order" risk above.
+- A test suite exists under `src/test/java/com/energysim/` (run with `mvn
+  test`): `HouseTest`/`PublicChargerTest` (plain unit tests, no Spring
+  context), `SimulationEngineTest` (the bulk of the coverage — generation,
+  seed reproducibility, tick/day/step-size math including odd step sizes,
+  energy accounting invariants, physical-model sanity bounds, config
+  normalization and the partial-update merge behavior), and
+  `SimulationControllerTest` (`@SpringBootTest` + MockMvc against the real
+  API). It has been run once for real (outside this sandbox) and caught two
+  genuine energy-accounting bugs on the first try — see the "Cumulative
+  energy meters" entry above for what they were and how they were fixed.
+  That fix has **not yet been re-verified with another real test run** —
+  do that before assuming it's actually correct now, not just
+  plausible-on-paper. Not covered yet: the weather/season model in
+  isolation (temperature curve across month/day-of-year boundaries,
+  sunrise/sunset math), the frontend (`app.js` has zero test coverage — no
+  test runner is even wired up for it), and there's no CI pipeline running
+  any of this automatically.
+- If you add a new field to `SimulationSnapshot`/`HouseSnapshot`/etc., add
+  or update the corresponding assertions in `SimulationEngineTest` — it's
+  the main thing currently guarding against the "record argument order"
+  class of bug described above.
 - `SimulationEngine` is a single ~600-line class doing config validation,
   neighbourhood generation, and all physics models. It works, but if it
   grows further, consider splitting the physics (`baseLoad`, `heatPumpLoad`,
