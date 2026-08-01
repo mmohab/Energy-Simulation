@@ -82,7 +82,8 @@ Configurable fields (`NeighbourhoodConfig`):
 | `publicChargers` | Optional explicit roster of `{ name, powerKw }` — when non-empty, fully overrides `publicChargerCount`/`publicChargerPowerOptionsKw` with exactly these chargers |
 | `batteryEnabled` | Turns the shared neighbourhood battery on or off |
 | `batteryCapacityKwh` | Usable battery energy capacity |
-| `batteryMaxChargePowerKw` / `batteryMaxDischargePowerKw` | Grid-side charge and discharge power limits |
+| `batteryMaxChargePowerKw` | Grid-side maximum charging power |
+| `batteryMaxDischargePowerKw` | Grid-side maximum discharging power |
 | `batteryRoundTripEfficiency` | Charge/discharge round-trip efficiency (0–1) |
 | `batteryInitialSocPercent` | Battery state of charge after every reset (0–100) |
 | `batteryPeakThresholdKw` | Grid-import target; the battery discharges above this target |

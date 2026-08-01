@@ -299,7 +299,8 @@ async function loadConfigIntoForm() {
     : cfg.publicChargerCount;
   el('cfgBatteryEnabled').checked = cfg.batteryEnabled;
   el('cfgBatteryCapacityKwh').value = cfg.batteryCapacityKwh;
-  el('cfgBatteryPowerKw').value = cfg.batteryMaxDischargePowerKw;
+  el('cfgBatteryMaxChargePowerKw').value = cfg.batteryMaxChargePowerKw;
+  el('cfgBatteryMaxDischargePowerKw').value = cfg.batteryMaxDischargePowerKw;
   el('cfgBatteryEfficiencyPct').value = Math.round(cfg.batteryRoundTripEfficiency * 100);
   el('cfgBatteryInitialSocPct').value = cfg.batteryInitialSocPercent;
   el('cfgBatteryPeakThresholdKw').value = cfg.batteryPeakThresholdKw;
@@ -325,8 +326,8 @@ async function applyConfigFromForm() {
     startTime: startTimeRaw === '' ? null : startTimeRaw,
     batteryEnabled: el('cfgBatteryEnabled').checked,
     batteryCapacityKwh: Math.max(0, parseFloat(el('cfgBatteryCapacityKwh').value) || 0),
-    batteryMaxChargePowerKw: Math.max(0, parseFloat(el('cfgBatteryPowerKw').value) || 0),
-    batteryMaxDischargePowerKw: Math.max(0, parseFloat(el('cfgBatteryPowerKw').value) || 0),
+    batteryMaxChargePowerKw: Math.max(0, parseFloat(el('cfgBatteryMaxChargePowerKw').value) || 0),
+    batteryMaxDischargePowerKw: Math.max(0, parseFloat(el('cfgBatteryMaxDischargePowerKw').value) || 0),
     batteryRoundTripEfficiency: clampPct(el('cfgBatteryEfficiencyPct').value) / 100,
     batteryInitialSocPercent: clampPct(el('cfgBatteryInitialSocPct').value),
     batteryPeakThresholdKw: Math.max(0, parseFloat(el('cfgBatteryPeakThresholdKw').value) || 0),
